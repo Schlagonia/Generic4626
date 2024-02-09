@@ -48,7 +48,7 @@ contract ShutdownTest is Setup {
         );
     }
 
-    function test_shutdownCanWithdraw(uint256 _amount) public {
+    function test_emergencyWithdraw(uint256 _amount) public {
         vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
 
         // Deposit into strategy

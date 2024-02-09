@@ -19,7 +19,7 @@ contract Sturdy is Base4626 {
         string memory _name,
         address _vault,
         address _merkleDrop
-    ) Base4626(_asset, _name) {
+    ) Base4626(_asset, _name, _vault) {
         merkleDrop = _merkleDrop;
     }
 
