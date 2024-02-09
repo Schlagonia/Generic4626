@@ -8,7 +8,7 @@ import {BaseHealthCheck, ERC20} from "@periphery/Bases/HealthCheck/BaseHealthChe
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Generic4626 is BaseHealthCheck {
+contract Base4626 is BaseHealthCheck {
     using SafeERC20 for ERC20;
 
     IStrategy public immutable vault;
@@ -41,6 +41,7 @@ contract Generic4626 is BaseHealthCheck {
      */
     function _deployFunds(uint256 _amount) internal virtual override {
         vault.deposit(_amount, address(this));
+        _stake(balanceOfVault());
     }
 
     /**
@@ -65,11 +66,11 @@ contract Generic4626 is BaseHealthCheck {
      * @param _amount, The amount of 'asset' to be freed.
      */
     function _freeFunds(uint256 _amount) internal virtual override {
-        vault.redeem(
-            vault.convertToShares(_amount),
-            address(this),
-            address(this)
-        );
+        uint256 shares = vault.convertToShares(_amount);
+
+        _unStake(shares);
+
+        vault.redeem(shares, address(this), address(this));
     }
 
     /**
@@ -111,6 +112,10 @@ contract Generic4626 is BaseHealthCheck {
         // Return total balance
         _totalAssets = balanceOfAsset() + balanceOfVault();
     }
+
+    function _stake(uint256 _amount) internal virtual {}
+
+    function _unStake(uint256 _amount) internal virtual {}
 
     function _claimAndSellRewards() internal virtual {}
 
