@@ -121,26 +121,61 @@ contract Base4626 is BaseHealthCheck {
         _totalAssets = balanceOfAsset() + valueOfVault();
     }
 
+    /**
+     * @dev Override to stake an `_amount` of vault tokens after they
+     *   are deposited to the `vault`.
+     * @param _amount The amount of vault tokens available to stake.
+     */
     function _stake(uint256 _amount) internal virtual {}
 
+    /**
+     * @dev If vault tokens are staked, override to unstake them before
+     *   any withdraw or redeems.
+     * @param _amount The amount of vault tokens to unstake.
+     */
     function _unStake(uint256 _amount) internal virtual {}
 
+    /**
+     * @dev Called during reports to do any harvesting of rewards needed.
+     */
     function _claimAndSellRewards() internal virtual {}
 
+    /**
+     * @notice Return the current loose balance of this strategies `asset`.
+     */
     function balanceOfAsset() public view virtual returns (uint256) {
         return asset.balanceOf(address(this));
     }
 
+    /**
+     * @notice Return the current balance of the strategies vault shares.
+     */
     function balanceOfVault() public view virtual returns (uint256) {
         return vault.balanceOf(address(this));
     }
 
+    /**
+     * @notice If the vaults tokens are staked. To override and return the
+     *  amount of vault tokens the strategy has staked.
+     */
     function balanceOfStake() public view virtual returns (uint256) {}
 
+    /**
+     * @notice The full value denominated in `asset` of the strategies vault
+     *   tokens held both in the contract and staked.
+     */
     function valueOfVault() public view virtual returns (uint256) {
         return vault.convertToAssets(balanceOfVault() + balanceOfStake());
     }
 
+    /**
+     * @notice The max amount of `asset` than can be redeemed from the vault.
+     * @dev If the vault tokens are staked this needs to include the
+     *  vault.maxRedeem(stakingContract) to be accurate.
+     *
+     *  NOTE: This should use vault.convertToAssets(vault.maxRedeem(address));
+     *    rather than vault.maxWithdraw(address);
+     */
     function vaultsMaxWithdraw() public view virtual returns (uint256) {
         return vault.convertToAssets(vault.maxRedeem(address(this)));
     }
@@ -173,6 +208,7 @@ contract Base4626 is BaseHealthCheck {
         override
         returns (uint256)
     {
+        // Return the max amount the vault will allow for deposits.
         return vault.maxDeposit(address(this));
     }
 
@@ -201,6 +237,7 @@ contract Base4626 is BaseHealthCheck {
         override
         returns (uint256)
     {
+        // Return the loose balance of asset and the max we can withdraw from the vault
         return balanceOfAsset() + vaultsMaxWithdraw();
     }
 

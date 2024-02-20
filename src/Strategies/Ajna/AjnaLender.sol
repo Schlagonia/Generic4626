@@ -53,11 +53,15 @@ contract AjnaLender is Base4626 {
     {
         uint256 redeemable;
 
+        // If the vaults shares are held in the strategy use this address for maxRedeem
         if (balanceOfVault() != 0) redeemable += vault.maxRedeem(address(this));
 
+        // Else if the compounder holds the vault shares.
         if (IStrategy(compounder).balanceOf(address(this)) != 0)
+            // We need to use the staking contract address for maxRedeem
             redeemable += vault.maxRedeem(staker);
 
+        // Convert the vault shares to `asset`.
         return vault.convertToAssets(redeemable);
     }
 }
