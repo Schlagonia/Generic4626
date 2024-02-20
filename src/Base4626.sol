@@ -68,8 +68,11 @@ contract Base4626 is BaseHealthCheck {
     function _freeFunds(uint256 _amount) internal virtual override {
         uint256 shares = vault.convertToShares(_amount);
 
-        if (shares > balanceOfVault()) {
-            _unStake(shares);
+        uint256 vaultBalance = balanceOfVault();
+        if (shares > vaultBalance) {
+            unchecked {
+                _unStake(shares - vaultBalance);
+            }
             shares = Math.min(shares, balanceOfVault());
         }
 
@@ -201,13 +204,9 @@ contract Base4626 is BaseHealthCheck {
      * @param . The address that is depositing into the strategy.
      * @return . The available amount the `_owner` can deposit in terms of `asset`
      */
-    function availableDepositLimit(address)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function availableDepositLimit(
+        address
+    ) public view virtual override returns (uint256) {
         // Return the max amount the vault will allow for deposits.
         return vault.maxDeposit(address(this));
     }
@@ -230,13 +229,9 @@ contract Base4626 is BaseHealthCheck {
      * @param . The address that is withdrawing from the strategy.
      * @return . The available amount that can be withdrawn in terms of `asset`
      */
-    function availableWithdrawLimit(address)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function availableWithdrawLimit(
+        address
+    ) public view virtual override returns (uint256) {
         // Return the loose balance of asset and the max we can withdraw from the vault
         return balanceOfAsset() + vaultsMaxWithdraw();
     }

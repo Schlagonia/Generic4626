@@ -70,11 +70,9 @@ contract SturdyLenderFactory {
         keeper = _keeper;
     }
 
-    function isDeployedStrategy(address _strategy)
-        external
-        view
-        returns (bool)
-    {
+    function isDeployedStrategy(
+        address _strategy
+    ) external view returns (bool) {
         address _vault = address(SturdyLender(_strategy).vault());
         return deployments[_vault] == _strategy;
     }

@@ -42,7 +42,7 @@ contract FunctionSignatureTest is Setup {
         assertEq(strategy.fullProfitUnlockDate(), 0, "unlock date");
         assertEq(strategy.profitUnlockingRate(), 0, "unlock rate");
         assertGt(strategy.lastReport(), 0, "last report");
-        assertEq(strategy.pricePerShare(), 10**asset.decimals(), "pps");
+        assertEq(strategy.pricePerShare(), 10 ** asset.decimals(), "pps");
         assertTrue(!strategy.isShutdown());
         assertEq(
             strategy.symbol(),

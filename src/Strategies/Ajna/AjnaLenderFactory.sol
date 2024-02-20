@@ -72,11 +72,9 @@ contract AjnaLenderFactory {
         keeper = _keeper;
     }
 
-    function isDeployedStrategy(address _strategy)
-        external
-        view
-        returns (bool)
-    {
+    function isDeployedStrategy(
+        address _strategy
+    ) external view returns (bool) {
         address _vault = address(AjnaLender(_strategy).vault());
         return deployments[_vault] == _strategy;
     }

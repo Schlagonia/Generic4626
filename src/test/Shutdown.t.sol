@@ -70,7 +70,7 @@ contract ShutdownTest is Setup {
         assertEq(strategy.totalIdle(), 0, "!totalIdle");
 
         vm.prank(management);
-        strategy.emergencyWithdraw(2**256 - 1);
+        strategy.emergencyWithdraw(2 ** 256 - 1);
 
         assertEq(strategy.totalAssets(), _amount, "!totalAssets");
         assertEq(strategy.totalDebt(), 0, "!totalDebt");
