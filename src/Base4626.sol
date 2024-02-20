@@ -68,7 +68,10 @@ contract Base4626 is BaseHealthCheck {
     function _freeFunds(uint256 _amount) internal virtual override {
         uint256 shares = vault.convertToShares(_amount);
 
-        _unStake(shares);
+        if (shares > balanceOfVault()) {
+            _unStake(shares);
+            shares = Math.min(shares, balanceOfVault());
+        }
 
         vault.redeem(shares, address(this), address(this));
     }
@@ -105,12 +108,17 @@ contract Base4626 is BaseHealthCheck {
         _claimAndSellRewards();
 
         // Redeposit any funds.
-        _deployFunds(
-            Math.min(balanceOfAsset(), availableDepositLimit(address(this)))
+        uint256 toDeploy = Math.min(
+            balanceOfAsset(),
+            availableDepositLimit(address(this))
         );
 
+        if (toDeploy != 0) {
+            _deployFunds(toDeploy);
+        }
+
         // Return total balance
-        _totalAssets = balanceOfAsset() + balanceOfVault();
+        _totalAssets = balanceOfAsset() + valueOfVault();
     }
 
     function _stake(uint256 _amount) internal virtual {}
@@ -124,7 +132,13 @@ contract Base4626 is BaseHealthCheck {
     }
 
     function balanceOfVault() public view virtual returns (uint256) {
-        return vault.convertToAssets(vault.balanceOf(address(this)));
+        return vault.balanceOf(address(this));
+    }
+
+    function balanceOfStake() public view virtual returns (uint256) {}
+
+    function valueOfVault() public view virtual returns (uint256) {
+        return vault.convertToAssets(balanceOfVault() + balanceOfStake());
     }
 
     function vaultsMaxWithdraw() public view virtual returns (uint256) {
@@ -152,14 +166,14 @@ contract Base4626 is BaseHealthCheck {
      * @param . The address that is depositing into the strategy.
      * @return . The available amount the `_owner` can deposit in terms of `asset`
      */
-    function availableDepositLimit(address _owner)
+    function availableDepositLimit(address)
         public
         view
         virtual
         override
         returns (uint256)
     {
-        return vault.maxDeposit(_owner);
+        return vault.maxDeposit(address(this));
     }
 
     /**
@@ -180,14 +194,14 @@ contract Base4626 is BaseHealthCheck {
      * @param . The address that is withdrawing from the strategy.
      * @return . The available amount that can be withdrawn in terms of `asset`
      */
-    function availableWithdrawLimit(address _owner)
+    function availableWithdrawLimit(address)
         public
         view
         virtual
         override
         returns (uint256)
     {
-        return TokenizedStrategy.totalIdle() + vaultsMaxWithdraw();
+        return balanceOfAsset() + vaultsMaxWithdraw();
     }
 
     /**
