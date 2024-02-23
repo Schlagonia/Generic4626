@@ -41,7 +41,7 @@ contract Base4626 is BaseHealthCheck {
      */
     function _deployFunds(uint256 _amount) internal virtual override {
         vault.deposit(_amount, address(this));
-        _stake(balanceOfVault());
+        _stake();
     }
 
     /**
@@ -125,11 +125,10 @@ contract Base4626 is BaseHealthCheck {
     }
 
     /**
-     * @dev Override to stake an `_amount` of vault tokens after they
+     * @dev Override to stake loose vault tokens after they
      *   are deposited to the `vault`.
-     * @param _amount The amount of vault tokens available to stake.
      */
-    function _stake(uint256 _amount) internal virtual {}
+    function _stake() internal virtual {}
 
     /**
      * @dev If vault tokens are staked, override to unstake them before
