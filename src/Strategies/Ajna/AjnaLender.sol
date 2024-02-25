@@ -53,7 +53,6 @@ contract AjnaLender is Base4626 {
         override
         returns (uint256)
     {
-        // TODO: Use the compounders maxWithdraw
         // We need to use the staking contract address for maxRedeem
         // Convert the vault shares to `asset`.
         return vault.convertToAssets(vault.maxRedeem(staker));

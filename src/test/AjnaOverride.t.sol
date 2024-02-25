@@ -56,6 +56,27 @@ contract AjnaOperationTest is OperationTest {
     }
 }
 
+contract AjnaDaiOperationTest is AjnaOperationTest {
+    function setUp() public virtual override {
+        super.setUp();
+
+        // Ajna dai vault
+        vault = 0xe24BA27551aBE96Ca401D39761cA2319Ea14e3CB;
+
+        compounder = 0x082a5743aAdf3d0Daf750EeF24652b36a68B1e9C;
+
+        staker = 0x54C6b2b293297e65b1d163C3E8dbc45338bfE443;
+
+        asset = ERC20(address(IStrategyInterface(vault).asset()));
+
+        strategy = IStrategyInterface(setUpAjna());
+
+        maxFuzzAmount =
+            IStrategyInterface(vault).maxDeposit(address(this)) -
+            10;
+    }
+}
+
 contract AjnaShutdownTest is ShutdownTest {
     AjnaLenderFactory public ajnaLenderFactory =
         new AjnaLenderFactory(management, performanceFeeRecipient, keeper);
@@ -98,5 +119,26 @@ contract AjnaShutdownTest is ShutdownTest {
         _strategy.acceptManagement();
 
         return address(_strategy);
+    }
+}
+
+contract AjnaDaiShutdownTest is AjnaShutdownTest {
+    function setUp() public virtual override {
+        super.setUp();
+
+        // Ajna dai vault
+        vault = 0xe24BA27551aBE96Ca401D39761cA2319Ea14e3CB;
+
+        compounder = 0x082a5743aAdf3d0Daf750EeF24652b36a68B1e9C;
+
+        staker = 0x54C6b2b293297e65b1d163C3E8dbc45338bfE443;
+
+        asset = ERC20(address(IStrategyInterface(vault).asset()));
+
+        strategy = IStrategyInterface(setUpAjna());
+
+        maxFuzzAmount =
+            IStrategyInterface(vault).maxDeposit(address(this)) -
+            10;
     }
 }
