@@ -54,6 +54,16 @@ contract AjnaOperationTest is OperationTest {
 
         return address(_strategy);
     }
+
+    function mintAndDepositIntoStrategy(
+        IStrategyInterface _strategy,
+        address _user,
+        uint256 _amount
+    ) public override {
+        super.mintAndDepositIntoStrategy(_strategy, _user, _amount);
+        vm.prank(IStrategyInterface(compounder).keeper());
+        IStrategyInterface(compounder).report();
+    }
 }
 
 contract AjnaDaiOperationTest is AjnaOperationTest {
@@ -119,6 +129,16 @@ contract AjnaShutdownTest is ShutdownTest {
         _strategy.acceptManagement();
 
         return address(_strategy);
+    }
+
+    function mintAndDepositIntoStrategy(
+        IStrategyInterface _strategy,
+        address _user,
+        uint256 _amount
+    ) public override {
+        super.mintAndDepositIntoStrategy(_strategy, _user, _amount);
+        vm.prank(IStrategyInterface(compounder).keeper());
+        IStrategyInterface(compounder).report();
     }
 }
 
