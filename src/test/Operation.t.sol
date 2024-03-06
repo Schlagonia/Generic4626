@@ -26,8 +26,6 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         assertEq(strategy.totalAssets(), _amount, "!totalAssets");
-        assertEq(strategy.totalDebt(), _amount, "!totalDebt");
-        assertEq(strategy.totalIdle(), 0, "!totalIdle");
 
         // Earn Interest
         skip(1 days);
@@ -68,8 +66,6 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         assertEq(strategy.totalAssets(), _amount, "!totalAssets");
-        assertEq(strategy.totalDebt(), _amount, "!totalDebt");
-        assertEq(strategy.totalIdle(), 0, "!totalIdle");
 
         // Earn Interest
         skip(1 days);
@@ -117,8 +113,6 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         assertEq(strategy.totalAssets(), _amount, "!totalAssets");
-        assertEq(strategy.totalDebt(), _amount, "!totalDebt");
-        assertEq(strategy.totalIdle(), 0, "!totalIdle");
 
         // Earn Interest
         skip(1 days);

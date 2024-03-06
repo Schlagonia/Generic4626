@@ -108,7 +108,7 @@ contract Setup is ExtendedTest, IEvents {
         IStrategyInterface _strategy,
         address _user,
         uint256 _amount
-    ) public {
+    ) public virtual {
         airdrop(asset, _user, _amount);
         depositIntoStrategy(_strategy, _user, _amount);
     }
@@ -120,9 +120,15 @@ contract Setup is ExtendedTest, IEvents {
         uint256 _totalDebt,
         uint256 _totalIdle
     ) public {
-        assertEq(_strategy.totalAssets(), _totalAssets, "!totalAssets");
-        assertEq(_strategy.totalDebt(), _totalDebt, "!totalDebt");
-        assertEq(_strategy.totalIdle(), _totalIdle, "!totalIdle");
+        uint256 _assets = _strategy.totalAssets();
+        uint256 _balance = ERC20(_strategy.asset()).balanceOf(
+            address(_strategy)
+        );
+        uint256 _idle = _balance > _assets ? _assets : _balance;
+        uint256 _debt = _assets - _idle;
+        assertEq(_assets, _totalAssets, "!totalAssets");
+        assertEq(_debt, _totalDebt, "!totalDebt");
+        assertEq(_idle, _totalIdle, "!totalIdle");
         assertEq(_totalAssets, _totalDebt + _totalIdle, "!Added");
     }
 
