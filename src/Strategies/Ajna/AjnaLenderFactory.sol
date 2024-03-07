@@ -55,6 +55,8 @@ contract AjnaLenderFactory {
 
         newStrategy.setPendingManagement(management);
 
+        newStrategy.setPerformanceFee(0);
+
         emit NewAjnaLender(address(newStrategy), _asset);
 
         deployments[_vault] = address(newStrategy);

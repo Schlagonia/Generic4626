@@ -110,16 +110,6 @@ contract Base4626 is BaseHealthCheck {
         // Claim and sell any rewards.
         _claimAndSellRewards();
 
-        // Redeposit any funds.
-        uint256 toDeploy = Math.min(
-            balanceOfAsset(),
-            availableDepositLimit(address(this))
-        );
-
-        if (toDeploy != 0) {
-            _deployFunds(toDeploy);
-        }
-
         // Return total balance
         _totalAssets = balanceOfAsset() + valueOfVault();
     }

@@ -130,7 +130,8 @@ contract SturdyOperationTest is OperationTest {
         vm.prank(keeper);
         (uint256 profit, uint256 loss) = strategy.report();
 
-        assertEq(asset.balanceOf(address(strategy)), 0);
+        // Doesnt reinvest profits
+        assertEq(asset.balanceOf(address(strategy)), amountNeeded);
 
         // Check return Values
         assertEq(profit, amountNeeded, "!profit");

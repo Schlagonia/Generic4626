@@ -5,6 +5,11 @@ import {Base4626} from "../../Base4626.sol";
 import {AuctionSwapper, Auction} from "@periphery/swappers/AuctionSwapper.sol";
 
 contract SturdyLender is Base4626, AuctionSwapper {
+    // Mapping to be set by management for any reward tokens.
+    // This can be used to set different mins for different tokens
+    // or to set to uin256.max if selling a reward token is reverting
+    mapping(address => uint256) public minAmountToSellMapping;
+
     constructor(
         address _asset,
         string memory _name,
@@ -20,8 +25,26 @@ contract SturdyLender is Base4626, AuctionSwapper {
 
     function _auctionKicked(
         address _token
-    ) internal virtual override returns (uint256) {
+    ) internal virtual override returns (uint256 _kicked) {
         require(_token != address(asset), "asset");
-        return super._auctionKicked(_token);
+        _kicked = super._auctionKicked(_token);
+        require(_kicked >= minAmountToSellMapping[_token], "too little");
+    }
+
+    /**
+     * @notice Set the `minAmountToSellMapping` for a specific `_token`.
+     * @dev This can be used by management to adjust wether or not the
+     * _claimAndSellRewards() function will attempt to sell a specific
+     * reward token. This can be used if liquidity is to low, amounts
+     * are to low or any other reason that may cause reverts.
+     *
+     * @param _token The address of the token to adjust.
+     * @param _amount Min required amount to sell.
+     */
+    function setMinAmountToSellMapping(
+        address _token,
+        uint256 _amount
+    ) external onlyManagement {
+        minAmountToSellMapping[_token] = _amount;
     }
 }
