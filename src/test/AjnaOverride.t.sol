@@ -6,17 +6,20 @@ import {Setup, ERC20, IStrategyInterface} from "./utils/Setup.sol";
 
 import {OperationTest} from "./Operation.t.sol";
 import {ShutdownTest} from "./Shutdown.t.sol";
+
+import {IAjnaLender} from "../interfaces/IStrategyInterface.sol";
 import {AjnaLenderFactory, AjnaLender} from "../Strategies/Ajna/AjnaLenderFactory.sol";
 
 import {AuctionFactory, Auction} from "@periphery/Auctions/AuctionFactory.sol";
 import {IAuctionSwapper} from "@periphery/swappers/interfaces/IAuctionSwapper.sol";
 
 contract AjnaOperationTest is OperationTest {
-    AjnaLenderFactory public ajnaLenderFactory =
-        new AjnaLenderFactory(management, performanceFeeRecipient, keeper);
+    AjnaLenderFactory public ajnaLenderFactory = new AjnaLenderFactory(keeper);
 
     address public compounder;
     address public staker;
+
+    address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
 
     function setUp() public virtual override {
         super.setUp();
@@ -27,6 +30,9 @@ contract AjnaOperationTest is OperationTest {
         compounder = 0xb974598227660bEfe79a23DFC473D859602254aC;
 
         staker = 0x0Ed535037c013c3628512980C169Ed59Eb805B49;
+
+        management = SMS;
+        performanceFeeRecipient = SMS;
 
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
@@ -52,6 +58,9 @@ contract AjnaOperationTest is OperationTest {
         vm.prank(management);
         _strategy.acceptManagement();
 
+        vm.prank(SMS);
+        IAjnaLender(address(_strategy)).setDepositor(user);
+
         return address(_strategy);
     }
 
@@ -63,6 +72,35 @@ contract AjnaOperationTest is OperationTest {
         super.mintAndDepositIntoStrategy(_strategy, _user, _amount);
         vm.prank(IStrategyInterface(compounder).keeper());
         IStrategyInterface(compounder).report();
+    }
+
+    // No fees on the Ajna lender
+    function test_profitableReport_withFees(
+        uint256 _amount,
+        uint16 _profitFactor
+    ) public override {
+        return;
+    }
+
+    function test_whitelist(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+
+        airdrop(asset, management, _amount);
+
+        vm.prank(management);
+        asset.approve(address(strategy), _amount);
+
+        vm.expectRevert("ERC4626: deposit more than max");
+        vm.prank(management);
+        strategy.deposit(_amount, management);
+
+        vm.prank(management);
+        IAjnaLender(address(strategy)).setDepositor(management);
+
+        vm.prank(management);
+        strategy.deposit(_amount, management);
+
+        assertEq(strategy.totalAssets(), _amount);
     }
 }
 
@@ -88,11 +126,12 @@ contract AjnaDaiOperationTest is AjnaOperationTest {
 }
 
 contract AjnaShutdownTest is ShutdownTest {
-    AjnaLenderFactory public ajnaLenderFactory =
-        new AjnaLenderFactory(management, performanceFeeRecipient, keeper);
+    AjnaLenderFactory public ajnaLenderFactory = new AjnaLenderFactory(keeper);
 
     address public compounder;
     address public staker;
+
+    address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
 
     function setUp() public virtual override {
         super.setUp();
@@ -103,6 +142,9 @@ contract AjnaShutdownTest is ShutdownTest {
         compounder = 0xb974598227660bEfe79a23DFC473D859602254aC;
 
         staker = 0x0Ed535037c013c3628512980C169Ed59Eb805B49;
+
+        management = SMS;
+        performanceFeeRecipient = SMS;
 
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
@@ -127,6 +169,9 @@ contract AjnaShutdownTest is ShutdownTest {
 
         vm.prank(management);
         _strategy.acceptManagement();
+
+        vm.prank(SMS);
+        IAjnaLender(address(_strategy)).setDepositor(user);
 
         return address(_strategy);
     }

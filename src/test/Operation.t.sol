@@ -100,7 +100,7 @@ contract OperationTest is Setup {
     function test_profitableReport_withFees(
         uint256 _amount,
         uint16 _profitFactor
-    ) public {
+    ) public virtual {
         vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
         _profitFactor = uint16(
             bound(uint256(_profitFactor), 10, MAX_BPS - 100)
