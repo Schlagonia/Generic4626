@@ -11,6 +11,8 @@ contract AjnaLender is Base4626 {
 
     address public immutable staker;
 
+    address public depositor;
+
     constructor(
         address _asset,
         string memory _name,
@@ -56,5 +58,17 @@ contract AjnaLender is Base4626 {
         // We need to use the staking contract address for maxRedeem
         // Convert the vault shares to `asset`.
         return vault.convertToAssets(vault.maxRedeem(staker));
+    }
+
+    function availableDepositLimit(
+        address _owner
+    ) public view virtual override returns (uint256) {
+        if (_owner != depositor) return 0;
+        // Return the max amount the vault will allow for deposits.
+        return vault.maxDeposit(address(this));
+    }
+
+    function setDepositor(address _depositor) external onlyManagement {
+        depositor = _depositor;
     }
 }

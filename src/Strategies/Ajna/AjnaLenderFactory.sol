@@ -10,20 +10,14 @@ contract AjnaLenderFactory {
 
     event NewAjnaLender(address indexed strategy, address indexed asset);
 
-    address public management;
-    address public performanceFeeRecipient;
+    address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
+
     address public keeper;
 
     /// @notice Track the deployments. asset => pool => strategy
     mapping(address => address) public deployments;
 
-    constructor(
-        address _management,
-        address _performanceFeeRecipient,
-        address _keeper
-    ) {
-        management = _management;
-        performanceFeeRecipient = _performanceFeeRecipient;
+    constructor(address _keeper) {
         keeper = _keeper;
     }
 
@@ -49,13 +43,15 @@ contract AjnaLenderFactory {
             address(new AjnaLender(_asset, _name, _vault, _compounder, _staker))
         );
 
-        newStrategy.setPerformanceFeeRecipient(performanceFeeRecipient);
+        newStrategy.setPerformanceFeeRecipient(SMS);
 
         newStrategy.setKeeper(keeper);
 
-        newStrategy.setPendingManagement(management);
+        newStrategy.setPendingManagement(SMS);
 
         newStrategy.setPerformanceFee(0);
+
+        newStrategy.setProfitMaxUnlockTime(0);
 
         emit NewAjnaLender(address(newStrategy), _asset);
 
@@ -63,14 +59,8 @@ contract AjnaLenderFactory {
         return address(newStrategy);
     }
 
-    function setAddresses(
-        address _management,
-        address _performanceFeeRecipient,
-        address _keeper
-    ) external {
-        require(msg.sender == management, "!management");
-        management = _management;
-        performanceFeeRecipient = _performanceFeeRecipient;
+    function setKeeper(address _keeper) external {
+        require(msg.sender == SMS, "!SMS");
         keeper = _keeper;
     }
 

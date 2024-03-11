@@ -12,3 +12,8 @@ interface IStrategyInterface is IBaseHealthCheck {
     function valueOfVault() external view returns (uint256);
     function vaultsMaxWithdraw() external view returns (uint256);
 }
+
+interface IAjnaLender is IStrategyInterface {
+    function depositor() external view returns (address);
+    function setDepositor(address _depositor) external;
+}
