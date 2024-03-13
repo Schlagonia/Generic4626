@@ -4,7 +4,8 @@ pragma solidity 0.8.18;
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
 
-import {Base4626, ERC20} from "../../Base4626.sol";
+import {Base4626Compounder, ERC20} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
+
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
 // Inherit the events so they can be checked if desired.
@@ -76,7 +77,13 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new Base4626(address(asset), "Tokenized Strategy", vault))
+            address(
+                new Base4626Compounder(
+                    address(asset),
+                    "Tokenized Strategy",
+                    vault
+                )
+            )
         );
 
         // set keeper
