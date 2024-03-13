@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.18;
 
-import {AjnaLender} from "./AjnaLender.sol";
+import {AjnaRouter} from "./AjnaRouter.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
-contract AjnaLenderFactory {
+contract AjnaRouterFactory {
     /// @notice Revert message for when a strategy has already been deployed.
     error AlreadyDeployed(address _strategy);
 
-    event NewAjnaLender(address indexed strategy, address indexed asset);
+    event NewAjnaRouter(address indexed strategy, address indexed asset);
 
     address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
 
@@ -28,7 +28,7 @@ contract AjnaLenderFactory {
      * @param _name The name for the lender to use.
      * @return . The address of the new lender.
      */
-    function newAjnaLender(
+    function newAjnaRouter(
         address _asset,
         string memory _name,
         address _vault,
@@ -40,7 +40,7 @@ contract AjnaLenderFactory {
         // We need to use the custom interface with the
         // tokenized strategies available setters.
         IStrategyInterface newStrategy = IStrategyInterface(
-            address(new AjnaLender(_asset, _name, _vault, _compounder, _staker))
+            address(new AjnaRouter(_asset, _name, _vault, _compounder, _staker))
         );
 
         newStrategy.setPerformanceFeeRecipient(SMS);
@@ -53,7 +53,7 @@ contract AjnaLenderFactory {
 
         newStrategy.setProfitMaxUnlockTime(0);
 
-        emit NewAjnaLender(address(newStrategy), _asset);
+        emit NewAjnaRouter(address(newStrategy), _asset);
 
         deployments[_vault] = address(newStrategy);
         return address(newStrategy);
@@ -67,7 +67,7 @@ contract AjnaLenderFactory {
     function isDeployedStrategy(
         address _strategy
     ) external view returns (bool) {
-        address _vault = address(AjnaLender(_strategy).vault());
+        address _vault = address(AjnaRouter(_strategy).vault());
         return deployments[_vault] == _strategy;
     }
 }

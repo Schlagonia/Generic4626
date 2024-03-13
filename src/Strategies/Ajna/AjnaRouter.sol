@@ -2,9 +2,9 @@
 pragma solidity 0.8.18;
 
 // We use the Tokenized Strategy interface.
-import {Base4626, ERC20, SafeERC20, IStrategy, Math} from "../../Base4626.sol";
+import {Base4626Compounder, ERC20, SafeERC20, IStrategy, Math} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 
-contract AjnaLender is Base4626 {
+contract AjnaRouter is Base4626Compounder {
     using SafeERC20 for ERC20;
 
     address public immutable compounder;
@@ -19,7 +19,7 @@ contract AjnaLender is Base4626 {
         address _vault,
         address _compounder,
         address _staker
-    ) Base4626(_asset, _name, _vault) {
+    ) Base4626Compounder(_asset, _name, _vault) {
         compounder = _compounder;
         staker = _staker;
 

@@ -1,19 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.18;
 
-import {IBaseHealthCheck} from "@periphery/Bases/HealthCheck/IBaseHealthCheck.sol";
+import {IBase4626Compounder} from "@periphery/Bases/4626Compounder/IBase4626Compounder.sol";
 
-interface IStrategyInterface is IBaseHealthCheck {
-    function vault() external view returns (address);
+interface IStrategyInterface is IBase4626Compounder {}
 
-    function balanceOfAsset() external view returns (uint256);
-    function balanceOfVault() external view returns (uint256);
-    function balanceOfStake() external view returns (uint256);
-    function valueOfVault() external view returns (uint256);
-    function vaultsMaxWithdraw() external view returns (uint256);
-}
-
-interface IAjnaLender is IStrategyInterface {
+interface IAjnaRouter is IStrategyInterface {
     function depositor() external view returns (address);
     function setDepositor(address _depositor) external;
 }

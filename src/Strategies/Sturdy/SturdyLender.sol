@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.18;
 
-import {Base4626} from "../../Base4626.sol";
+import {Base4626Compounder} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 import {AuctionSwapper, Auction} from "@periphery/swappers/AuctionSwapper.sol";
 
-contract SturdyLender is Base4626, AuctionSwapper {
+contract SturdyLender is Base4626Compounder, AuctionSwapper {
     // Mapping to be set by management for any reward tokens.
     // This can be used to set different mins for different tokens
     // or to set to uin256.max if selling a reward token is reverting
@@ -14,7 +14,7 @@ contract SturdyLender is Base4626, AuctionSwapper {
         address _asset,
         string memory _name,
         address _vault
-    ) Base4626(_asset, _name, _vault) {}
+    ) Base4626Compounder(_asset, _name, _vault) {}
 
     function setAuction(address _auction) external onlyEmergencyAuthorized {
         if (_auction != address(0)) {

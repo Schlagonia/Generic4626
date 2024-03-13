@@ -7,14 +7,14 @@ import {Setup, ERC20, IStrategyInterface} from "./utils/Setup.sol";
 import {OperationTest} from "./Operation.t.sol";
 import {ShutdownTest} from "./Shutdown.t.sol";
 
-import {IAjnaLender} from "../interfaces/IStrategyInterface.sol";
-import {AjnaLenderFactory, AjnaLender} from "../Strategies/Ajna/AjnaLenderFactory.sol";
+import {IAjnaRouter} from "../interfaces/IStrategyInterface.sol";
+import {AjnaRouterFactory, AjnaRouter} from "../Strategies/Ajna/AjnaRouterFactory.sol";
 
 import {AuctionFactory, Auction} from "@periphery/Auctions/AuctionFactory.sol";
 import {IAuctionSwapper} from "@periphery/swappers/interfaces/IAuctionSwapper.sol";
 
 contract AjnaOperationTest is OperationTest {
-    AjnaLenderFactory public ajnaLenderFactory = new AjnaLenderFactory(keeper);
+    AjnaRouterFactory public ajnaRouterFactory = new AjnaRouterFactory(keeper);
 
     address public compounder;
     address public staker;
@@ -46,7 +46,7 @@ contract AjnaOperationTest is OperationTest {
     function setUpAjna() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            ajnaLenderFactory.newAjnaLender(
+            ajnaRouterFactory.newAjnaRouter(
                 address(asset),
                 "Test Ajna",
                 vault,
@@ -59,7 +59,7 @@ contract AjnaOperationTest is OperationTest {
         _strategy.acceptManagement();
 
         vm.prank(SMS);
-        IAjnaLender(address(_strategy)).setDepositor(user);
+        IAjnaRouter(address(_strategy)).setDepositor(user);
 
         return address(_strategy);
     }
@@ -95,7 +95,7 @@ contract AjnaOperationTest is OperationTest {
         strategy.deposit(_amount, management);
 
         vm.prank(management);
-        IAjnaLender(address(strategy)).setDepositor(management);
+        IAjnaRouter(address(strategy)).setDepositor(management);
 
         vm.prank(management);
         strategy.deposit(_amount, management);
@@ -126,7 +126,7 @@ contract AjnaDaiOperationTest is AjnaOperationTest {
 }
 
 contract AjnaShutdownTest is ShutdownTest {
-    AjnaLenderFactory public ajnaLenderFactory = new AjnaLenderFactory(keeper);
+    AjnaRouterFactory public ajnaRouterFactory = new AjnaRouterFactory(keeper);
 
     address public compounder;
     address public staker;
@@ -158,7 +158,7 @@ contract AjnaShutdownTest is ShutdownTest {
     function setUpAjna() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            ajnaLenderFactory.newAjnaLender(
+            ajnaRouterFactory.newAjnaRouter(
                 address(asset),
                 "Test Ajna",
                 vault,
@@ -171,7 +171,7 @@ contract AjnaShutdownTest is ShutdownTest {
         _strategy.acceptManagement();
 
         vm.prank(SMS);
-        IAjnaLender(address(_strategy)).setDepositor(user);
+        IAjnaRouter(address(_strategy)).setDepositor(user);
 
         return address(_strategy);
     }
