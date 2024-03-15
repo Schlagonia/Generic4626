@@ -80,7 +80,7 @@ contract SturdyOperationTest is OperationTest {
         vm.prank(management);
         ISturdyLender(address(strategy)).setAuction(_auction);
 
-        vm.expectRevert("asset");
+        vm.expectRevert("!allowed");
         vm.prank(_auction);
         ISturdyLender(address(strategy)).auctionKicked(address(asset));
 
