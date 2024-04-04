@@ -15,6 +15,221 @@ import {IsUSDe} from "../interfaces/IsUSDe.sol";
 
 interface IStakedUSDe is IAuctionSwapper {
     function setAuction(address _auction) external;
+    function startCooldown(uint256 _assetAmount) external returns (uint256);
+    function cooldownAll() external returns (uint256);
+    function unstake() external;
+}
+
+contract CooldownTests is Setup {
+    uint256 public cooldown;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        // sUSDe vault
+        vault = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
+
+        asset = ERC20(address(IStrategyInterface(vault).asset()));
+
+        strategy = IStrategyInterface(setUpStakedUSDe());
+
+        cooldown = IsUSDe(vault).cooldownDuration();
+    }
+
+    function setUpStakedUSDe() public returns (address) {
+        vm.startPrank(management);
+        // we save the strategy as a IStrategyInterface to give it the needed interface
+        IStrategyInterface _strategy = IStrategyInterface(
+            address(new StakedUSDe())
+        );
+
+        _strategy.setKeeper(keeper);
+
+        _strategy.setPerformanceFeeRecipient(performanceFeeRecipient);
+
+        vm.stopPrank();
+
+        return address(_strategy);
+    }
+
+    function test_operationWithCooldown(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+
+        // Deposit into strategy
+        mintAndDepositIntoStrategy(strategy, user, _amount);
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        // Earn Interest
+        skip(1 days);
+
+        // Report profit
+        vm.prank(keeper);
+        (uint256 profit, uint256 loss) = strategy.report();
+
+        // Check return Values
+        assertGt(profit, 0, "!profit");
+        assertEq(loss, 0, "!loss");
+
+        skip(strategy.profitMaxUnlockTime());
+
+        uint256 balanceBefore = asset.balanceOf(user);
+
+        // Cannot Withdraw funds before cooldown
+        vm.expectRevert("ERC4626: redeem more than max");
+        vm.prank(user);
+        strategy.redeem(_amount, user, user);
+
+        // Start cooldown
+        vm.prank(management);
+        IStakedUSDe(address(strategy)).startCooldown(_amount + profit);
+
+        vm.expectRevert("ERC4626: redeem more than max");
+        vm.prank(user);
+        strategy.redeem(_amount, user, user);
+
+        skip(cooldown);
+
+        console.log("Max Redeem ", strategy.maxRedeem(user));
+
+        vm.prank(user);
+        strategy.redeem(_amount, user, user);
+
+        assertGt(
+            asset.balanceOf(user),
+            balanceBefore + _amount,
+            "!final balance"
+        );
+    }
+
+    function test_operationWithCooldown_half(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+
+        // Deposit into strategy
+        mintAndDepositIntoStrategy(strategy, user, _amount);
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        // Earn Interest
+        skip(1 days);
+
+        // Report profit
+        vm.prank(keeper);
+        (uint256 profit, uint256 loss) = strategy.report();
+
+        // Check return Values
+        assertGt(profit, 0, "!profit");
+        assertEq(loss, 0, "!loss");
+
+        skip(strategy.profitMaxUnlockTime());
+
+        uint256 balanceBefore = asset.balanceOf(user);
+
+        // Cannot Withdraw funds before cooldown
+        vm.expectRevert("ERC4626: redeem more than max");
+        vm.prank(user);
+        strategy.redeem(_amount / 2, user, user);
+
+        // Start cooldown
+        vm.prank(management);
+        IStakedUSDe(address(strategy)).startCooldown((_amount + profit) / 2);
+
+        skip(cooldown);
+
+        vm.prank(user);
+        strategy.redeem(_amount / 2, user, user);
+
+        assertGt(
+            asset.balanceOf(user),
+            balanceBefore + (_amount / 2),
+            "!final balance"
+        );
+    }
+
+    function test_reportDuringCooldown(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+
+        // Deposit into strategy
+        mintAndDepositIntoStrategy(strategy, user, _amount);
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        // Earn Interest
+        skip(1 days);
+
+        // Start cooldown for everything
+        vm.prank(management);
+        IStakedUSDe(address(strategy)).cooldownAll();
+
+        // Report profit
+        vm.prank(keeper);
+        (uint256 profit, uint256 loss) = strategy.report();
+
+        // Check return Values
+        assertGt(profit, 0, "!profit");
+        assertEq(loss, 0, "!loss");
+
+        skip(strategy.profitMaxUnlockTime());
+
+        uint256 balanceBefore = asset.balanceOf(user);
+
+        skip(cooldown);
+
+        vm.prank(management);
+        IStakedUSDe(address(strategy)).unstake();
+
+        // Should have no profit since it was cooling down
+        vm.prank(keeper);
+        (profit, loss) = strategy.report();
+
+        // Check return Values
+        assertEq(profit, 0, "!profit");
+        assertEq(loss, 0, "!loss");
+
+        vm.prank(user);
+        strategy.redeem(_amount, user, user);
+
+        assertGt(
+            asset.balanceOf(user),
+            balanceBefore + _amount,
+            "!final balance"
+        );
+    }
+
+    function test_emergencyWithdraw_cools(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+
+        // Deposit into strategy
+        mintAndDepositIntoStrategy(strategy, user, _amount);
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        // Earn Interest
+        skip(1 days);
+
+        // Shutdown the strategy
+        vm.prank(management);
+        strategy.shutdownStrategy();
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        vm.prank(management);
+        strategy.emergencyWithdraw(2 ** 256 - 1);
+
+        assertEq(strategy.totalAssets(), _amount, "!totalAssets");
+
+        // All funds should be cooling down
+        assertEq(strategy.balanceOfVault(), 0);
+
+        skip(cooldown);
+
+        // Make sure we can still withdraw the full amount
+        uint256 balanceBefore = asset.balanceOf(user);
+
+        // Withdraw all funds
+        vm.prank(user);
+        strategy.redeem(_amount, user, user);
+    }
 }
 
 contract USDeOperationTest is OperationTest {

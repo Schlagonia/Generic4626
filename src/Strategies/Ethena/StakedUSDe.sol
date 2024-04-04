@@ -34,12 +34,35 @@ contract StakedUSDe is Base4626Compounder, AuctionSwapper {
         IsUSDe(address(vault)).unstake(address(this));
     }
 
-    function vaultsMaxWithdraw() public view override returns (uint256) {
+    function _freeFunds(uint256 _amount) internal override {
         if (IsUSDe(address(vault)).cooldownDuration() != 0) {
-            return 0;
+            // We should only reach this if everything is cooled down.
+            IsUSDe(address(vault)).unstake(address(this));
+        } else {
+            super._freeFunds(_amount);
+        }
+    }
+
+    function vaultsMaxWithdraw() public view override returns (uint256) {
+        // If there is a cooldown return what has been fully cooled down
+        if (IsUSDe(address(vault)).cooldownDuration() != 0) {
+            IsUSDe.UserCooldown memory _cooldown = IsUSDe(address(vault))
+                .cooldowns(address(this));
+
+            // Check if the funds are unlocked.
+            if (_cooldown.cooldownEnd <= block.timestamp) {
+                return _cooldown.underlyingAmount;
+            }
         } else {
             return super.vaultsMaxWithdraw();
         }
+    }
+
+    function valueOfVault() public view override returns (uint256) {
+        // Vault balance plus anything cooling down.
+        return
+            vault.convertToAssets(balanceOfVault()) +
+            IsUSDe(address(vault)).cooldowns(address(this)).underlyingAmount;
     }
 
     function setAuction(address _auction) external onlyEmergencyAuthorized {
@@ -78,15 +101,14 @@ contract StakedUSDe is Base4626Compounder, AuctionSwapper {
     }
 
     function _emergencyWithdraw(uint256 _amount) internal override {
-        uint256 _duration = IsUSDe(address(vault)).cooldownDuration();
         // If there is a cooldown
-        if (_duration != 0) {
+        if (IsUSDe(address(vault)).cooldownDuration() != 0) {
             IsUSDe.UserCooldown memory _cooldown = IsUSDe(address(vault))
                 .cooldowns(address(this));
 
             // Check if any funds are unlocked.
             if (
-                _cooldown.cooldownEnd > block.timestamp &&
+                _cooldown.cooldownEnd <= block.timestamp &&
                 _cooldown.underlyingAmount != 0
             ) {
                 IsUSDe(address(vault)).unstake(address(this));
