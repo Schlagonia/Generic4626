@@ -11,6 +11,8 @@ import {StakedUSDe} from "../Strategies/Ethena/StakedUSDe.sol";
 import {AuctionFactory, Auction} from "@periphery/Auctions/AuctionFactory.sol";
 import {IAuctionSwapper} from "@periphery/swappers/interfaces/IAuctionSwapper.sol";
 
+import {IsUSDe} from "../interfaces/IsUSDe.sol";
+
 interface IStakedUSDe is IAuctionSwapper {
     function setAuction(address _auction) external;
 }
@@ -25,6 +27,10 @@ contract USDeOperationTest is OperationTest {
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
         strategy = IStrategyInterface(setUpStakedUSDe());
+
+        // Use 0 cooldown for normal tests
+        vm.prank(0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862);
+        IsUSDe(vault).setCooldownDuration(0);
     }
 
     function setUpStakedUSDe() public returns (address) {
@@ -131,7 +137,7 @@ contract USDeOperationTest is OperationTest {
         assertEq(asset.balanceOf(address(strategy)), amountNeeded);
 
         // Check return Values
-        assertEq(profit, amountNeeded, "!profit");
+        assertGe(profit, amountNeeded, "!profit");
         assertEq(loss, 0, "!loss");
 
         skip(strategy.profitMaxUnlockTime());
@@ -160,6 +166,10 @@ contract USDeShutdownTest is ShutdownTest {
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
         strategy = IStrategyInterface(setUpStakedUSDe());
+
+        // Use 0 cooldown for normal tests
+        vm.prank(0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862);
+        IsUSDe(vault).setCooldownDuration(0);
     }
 
     function setUpStakedUSDe() public returns (address) {

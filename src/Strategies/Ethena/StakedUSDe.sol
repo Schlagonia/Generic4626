@@ -4,18 +4,7 @@ pragma solidity 0.8.18;
 import {Base4626Compounder} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 import {AuctionSwapper, Auction} from "@periphery/swappers/AuctionSwapper.sol";
 
-interface IsUSDe {
-    struct UserCooldown {
-        uint104 cooldownEnd;
-        uint152 underlyingAmount;
-    }
-
-    function cooldownShares(uint256 shares) external returns (uint256);
-    function cooldownAssets(uint256 assets) external returns (uint256);
-    function cooldownDuration() external view returns (uint256);
-    function unstake(address receiver) external;
-    function cooldowns(address) external view returns (UserCooldown memory);
-}
+import {IsUSDe} from "../../interfaces/IsUSDe.sol";
 
 contract StakedUSDe is Base4626Compounder, AuctionSwapper {
     // Mapping to be set by management for any reward tokens.
