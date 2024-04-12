@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.18;
 
-import {Base4626Compounder} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 import {AuctionSwapper, Auction} from "@periphery/swappers/AuctionSwapper.sol";
+import {Base4626Compounder} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 
 import {IsUSDe} from "../../interfaces/IsUSDe.sol";
 
@@ -75,10 +75,7 @@ contract StakedUSDe is Base4626Compounder, AuctionSwapper {
     function _auctionKicked(
         address _token
     ) internal virtual override returns (uint256 _kicked) {
-        require(
-            _token != address(asset),
-            "!allowed"
-        );
+        require(_token != address(asset), "!allowed");
         _kicked = super._auctionKicked(_token);
         require(_kicked >= minAmountToSellMapping[_token], "too little");
     }
