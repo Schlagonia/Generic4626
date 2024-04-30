@@ -75,7 +75,10 @@ contract StakedUSDe is Base4626Compounder, AuctionSwapper {
     function _auctionKicked(
         address _token
     ) internal virtual override returns (uint256 _kicked) {
-        require(_token != address(asset), "!allowed");
+        require(
+            _token != address(asset) && _token != address(vault),
+            "!allowed"
+        );
         _kicked = super._auctionKicked(_token);
         require(_kicked >= minAmountToSellMapping[_token], "too little");
     }
