@@ -13,3 +13,7 @@
 [submodule "lib/tokenized-strategy-periphery"]
 	path = lib/tokenized-strategy-periphery
 	url = https://github.com/yearn/tokenized-strategy-periphery
+[submodule "lib/uniswap-v3-core"]
+	path = lib/uniswap-v3-core
+	url = https://github.com/Uniswap/v3-core
+	branch = simulate
