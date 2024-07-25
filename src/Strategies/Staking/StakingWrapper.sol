@@ -11,12 +11,16 @@ interface IStaker {
     function getReward() external;
     function exit() external;
     function isRetired() external view returns (bool);
+    function rewardTokens(uint256) external view returns (address);
+    function rewardTokensLength() external view returns (uint256);
 }
 
 contract StakingWrapper is Base4626Compounder {
     using SafeERC20 for ERC20;
 
     address public immutable staker;
+
+    address public rewardReceiver;
 
     constructor(
         address _asset,
@@ -59,7 +63,14 @@ contract StakingWrapper is Base4626Compounder {
 
     function _claimAndSellRewards() internal override {
         IStaker(staker).getReward();
-        // TODO: Send claimed tokens to somewhere
+        uint256 number = IStaker(staker).rewardTokensLength();
+
+        for (uint256 i; i < number; ++i) {
+            address token = IStaker(staker).rewardTokens(i);
+            uint256 balance = ERC20(token).balanceOf(address(this));
+            if (balance != 0)
+                ERC20(token).safeTransfer(rewardReceiver, balance);
+        }
     }
 
     function availableDepositLimit(
