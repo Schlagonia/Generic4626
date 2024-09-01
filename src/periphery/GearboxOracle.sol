@@ -44,10 +44,13 @@ interface IUniswapRouter {
     ) external view returns (uint256[] memory amounts);
 }
 
-contract GearboxOracle {
+contract GearboxCrvUSDOracle {
     // Curve pool for GEAR pricing
     address internal constant GEAR_ETH_CURVE_POOL =
         0x0E9B5B092caD6F1c5E6bc7f89Ffe1abb5c95F1C2;
+
+    address internal constant TRI_CRV_USD_CURVE_POOL = 
+        0x4eBdF703948ddCEA3B11f675B4D1Fba9d2414A14;
 
     // Tokens
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -125,17 +128,7 @@ contract GearboxOracle {
             gearPerSecond
         );
 
-        uint256 assetPerSecond;
-        if (strategy.asset() == WETH) {
-            assetPerSecond = ethPerSecond;
-        } else {
-            address[] memory path = new address[](2);
-            path[0] = WETH;
-            path[1] = strategy.asset();
-            assetPerSecond = IUniswapRouter(
-                0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-            ).getAmountsOut(ethPerSecond, path)[1];
-        }
+        uint256 assetPerSecond = ICurvePool(TRI_CRV_USD_CURVE_POOL).get_dy(1, 0, ethPerSecond);
 
         // Calculate total supply including the delta converted to shares
         uint256 supply;

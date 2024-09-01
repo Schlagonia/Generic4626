@@ -69,7 +69,7 @@ contract OracleTest is Setup {
         _delta = 10_000e6;
 
         checkOracle(
-            address(0xf6E2d36c489e5B361CdC962D4568ceA663AD5ddC),
+            address(0xbf2e5BeD692C09aF8B39677e315F36aDF39bD685),
             _delta
         );
         assertTrue(false);
