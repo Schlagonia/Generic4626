@@ -7,7 +7,7 @@ import {Setup, ERC20, IStrategyInterface} from "./utils/Setup.sol";
 import {OperationTest} from "./Operation.t.sol";
 import {ShutdownTest} from "./Shutdown.t.sol";
 
-import {IAjnaRouter} from "../interfaces/IStrategyInterface.sol";
+import {IAjnaRouter} from "../Strategies/Ajna/IAjnaRouter.sol";
 import {AjnaRouterFactory, AjnaRouter} from "../Strategies/Ajna/AjnaRouterFactory.sol";
 
 import {AuctionFactory, Auction} from "@periphery/Auctions/AuctionFactory.sol";
