@@ -39,6 +39,10 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
         address _token,
         SwapType _swapType
     ) external onlyManagement {
+        require(
+            _token != address(asset) && _token != address(vault),
+            "cannot be a reward token"
+        );
         allRewardTokens.push(_token);
         swapType[_token] = _swapType;
     }
@@ -132,6 +136,10 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
      * @param _from The token that was being sold.
      */
     function _kickAuction(address _from) internal virtual returns (uint256) {
+        require(
+            _from != address(asset) && _from != address(vault),
+            "cannot kick"
+        );
         uint256 _balance = ERC20(_from).balanceOf(address(this));
         ERC20(_from).safeTransfer(auction, _balance);
         return IAuction(auction).kick(_from);

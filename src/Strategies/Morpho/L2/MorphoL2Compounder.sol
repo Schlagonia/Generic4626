@@ -46,6 +46,10 @@ contract MorphoL2Compounder is
         address _token,
         SwapType _swapType
     ) external onlyManagement {
+        require(
+            _token != address(asset) && _token != address(vault),
+            "cannot be a reward token"
+        );
         allRewardTokens.push(_token);
         swapType[_token] = _swapType;
     }
@@ -71,6 +75,10 @@ contract MorphoL2Compounder is
     }
 
     function enableTradeFactoryToken(address _token) external onlyManagement {
+        require(
+            _token != address(asset) && _token != address(vault),
+            "cannot enable"
+        );
         _addToken(_token, address(asset));
     }
 
