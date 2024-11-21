@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {IAeroRouter} from "../../../interfaces/Aero/IAeroRouter.sol";
 import {UniswapV3Swapper} from "@periphery/swappers/UniswapV3Swapper.sol";
 import {TradeFactorySwapper} from "@periphery/swappers/TradeFactorySwapper.sol";
-import {Base4626Compounder, ERC20} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
+import {Base4626Compounder, ERC20, Math} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 
 contract MorphoL2Compounder is
     Base4626Compounder,
@@ -55,10 +55,12 @@ contract MorphoL2Compounder is
     }
 
     function removeRewardToken(address _token) external onlyManagement {
-        for (uint256 i = 0; i < allRewardTokens.length; i++) {
-            if (allRewardTokens[i] == _token) {
-                allRewardTokens[i] = allRewardTokens[
-                    allRewardTokens.length - 1
+        address[] memory _allRewardTokens = allRewardTokens;
+
+        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+            if (_allRewardTokens[i] == _token) {
+                allRewardTokens[i] = _allRewardTokens[
+                    _allRewardTokens.length - 1
                 ];
                 allRewardTokens.pop();
             }
@@ -138,8 +140,10 @@ contract MorphoL2Compounder is
     function _claimRewards() internal override {}
 
     function _claimAndSellRewards() internal override {
-        for (uint256 i = 0; i < allRewardTokens.length; i++) {
-            address token = allRewardTokens[i];
+        address[] memory _allRewardTokens = allRewardTokens;
+
+        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+            address token = _allRewardTokens[i];
             SwapType _swapType = swapType[token];
             uint256 balance = ERC20(token).balanceOf(address(this));
 
@@ -150,6 +154,16 @@ contract MorphoL2Compounder is
                     _aerodromeSwapFrom(token, address(asset), balance, 0);
                 }
             }
+        }
+
+        // Redeploy to new yield source.
+        uint256 toDeploy = Math.min(
+            balanceOfAsset(),
+            availableDepositLimit(address(this))
+        );
+
+        if (toDeploy > 0) {
+            _deployFunds(toDeploy);
         }
     }
 

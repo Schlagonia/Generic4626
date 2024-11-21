@@ -73,6 +73,147 @@ contract MorphoOperationTest is OperationTest {
         vm.stopPrank();
         return address(_strategy);
     }
+
+    function test_uniswapV3_swap() public {
+        uint256 amount = 1000e6;
+        mintAndDepositIntoStrategy(strategy, user, amount);
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).setDoHealthCheck(false);
+
+        airdrop(ERC20(swapToken), address(strategy), amount);
+
+        assertEq(
+            ERC20(swapToken).balanceOf(address(strategy)),
+            amount,
+            "!swap"
+        );
+        assertEq(asset.balanceOf(address(strategy)), 0, "!asset");
+
+        vm.prank(keeper);
+        strategy.report();
+
+        assertEq(ERC20(swapToken).balanceOf(address(strategy)), 0, "!swap");
+        assertGt(asset.balanceOf(address(strategy)), 0, "!asset");
+    }
+
+    function test_auctionSwap() public {
+        uint256 amount = 1000e6;
+        mintAndDepositIntoStrategy(strategy, user, amount);
+
+        airdrop(ERC20(swapToken), address(strategy), amount);
+
+        address auction = AuctionFactory(
+            0xa076c247AfA44f8F006CA7f21A4EF59f7e4dc605
+        ).createNewAuction(address(asset), address(strategy), management);
+
+        vm.prank(management);
+        Auction(auction).enable(swapToken);
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).setSwapType(
+            swapToken,
+            IMorphoCompounder.SwapType.AUCTION
+        );
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).setAuction(address(auction));
+
+        assertEq(
+            ERC20(swapToken).balanceOf(address(strategy)),
+            amount,
+            "!swap"
+        );
+
+        vm.prank(keeper);
+        uint256 kicked = IMorphoCompounder(address(strategy)).kickAuction(
+            swapToken
+        );
+
+        assertEq(kicked, amount, "!kicked");
+        assertEq(ERC20(swapToken).balanceOf(address(strategy)), 0, "!swap");
+        assertEq(asset.balanceOf(address(strategy)), 0, "!asset");
+        assertTrue(Auction(auction).isActive(swapToken), "!active");
+    }
+
+    function test_allRewardTokens() public {
+        vm.expectRevert();
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).addRewardToken(
+            address(asset),
+            IMorphoCompounder.SwapType.UNISWAP_V3
+        );
+
+        vm.expectRevert();
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).addRewardToken(
+            address(vault),
+            IMorphoCompounder.SwapType.UNISWAP_V3
+        );
+
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens().length,
+            1,
+            "!length"
+        );
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens()[0],
+            swapToken,
+            "!swapToken"
+        );
+
+        address toAdd = tokenAddrs["DAI"];
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).addRewardToken(
+            toAdd,
+            IMorphoCompounder.SwapType.UNISWAP_V3
+        );
+
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens().length,
+            2,
+            "!length"
+        );
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens()[1],
+            toAdd,
+            "!toAdd"
+        );
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).removeRewardToken(swapToken);
+
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens().length,
+            1,
+            "!length"
+        );
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens()[0],
+            toAdd,
+            "!toAdd"
+        );
+        assertEq(
+            uint256(IMorphoCompounder(address(strategy)).swapType(swapToken)),
+            0,
+            "!swapType"
+        );
+
+        vm.prank(management);
+        IMorphoCompounder(address(strategy)).removeRewardToken(toAdd);
+
+        assertEq(
+            IMorphoCompounder(address(strategy)).getAllRewardTokens().length,
+            0,
+            "!length"
+        );
+        assertEq(
+            uint256(IMorphoCompounder(address(strategy)).swapType(toAdd)),
+            0,
+            "!swapType"
+        );
+    }
 }
 
 contract MorphoWETHOperationTest is MorphoOperationTest {

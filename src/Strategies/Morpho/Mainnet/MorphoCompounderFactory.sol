@@ -70,7 +70,7 @@ contract MorphoCompounderFactory {
 
         newStrategy.setEmergencyAdmin(SMS);
 
-        newStrategy.setProfitMaxUnlockTime(60 * 60 * 24 * 2);
+        newStrategy.setProfitMaxUnlockTime(60 * 60 * 24 * 3);
 
         IOracle(APR_ORACLE).setOracle(address(newStrategy), aprOracle);
 

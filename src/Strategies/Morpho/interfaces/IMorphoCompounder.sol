@@ -27,5 +27,5 @@ interface IMorphoCompounder is IStrategyInterface, IUniswapV3Swapper {
         address _token,
         uint256 _amount
     ) external;
-    function kickAuction(address _token) external;
+    function kickAuction(address _token) external returns (uint256);
 }

@@ -48,10 +48,12 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
     }
 
     function removeRewardToken(address _token) external onlyManagement {
-        for (uint256 i = 0; i < allRewardTokens.length; i++) {
-            if (allRewardTokens[i] == _token) {
-                allRewardTokens[i] = allRewardTokens[
-                    allRewardTokens.length - 1
+        address[] memory _allRewardTokens = allRewardTokens;
+
+        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+            if (_allRewardTokens[i] == _token) {
+                allRewardTokens[i] = _allRewardTokens[
+                    _allRewardTokens.length - 1
                 ];
                 allRewardTokens.pop();
             }
@@ -112,8 +114,10 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
     }
 
     function _claimAndSellRewards() internal override {
-        for (uint256 i = 0; i < allRewardTokens.length; i++) {
-            address token = allRewardTokens[i];
+        address[] memory _allRewardTokens = allRewardTokens;
+
+        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+            address token = _allRewardTokens[i];
             SwapType _swapType = swapType[token];
             uint256 balance = ERC20(token).balanceOf(address(this));
 
@@ -127,8 +131,11 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
         }
     }
 
-    function kickAuction(address _token) external onlyKeepers {
-        _kickAuction(_token);
+    function kickAuction(
+        address _token
+    ) external onlyKeepers returns (uint256) {
+        require(swapType[_token] == SwapType.AUCTION, "!auction");
+        return _kickAuction(_token);
     }
 
     /**
