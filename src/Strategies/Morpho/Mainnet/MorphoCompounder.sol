@@ -14,6 +14,7 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
     using SafeERC20 for ERC20;
 
     enum SwapType {
+        NULL,
         UNISWAP_V3,
         AUCTION
     }

@@ -12,6 +12,7 @@ contract MorphoL2Compounder is
     UniswapV3Swapper
 {
     enum SwapType {
+        NULL,
         AERODROME,
         UNISWAP_V3,
         TRADE_FACTORY

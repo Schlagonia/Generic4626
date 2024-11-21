@@ -12,6 +12,7 @@ interface IMorphoL2Compounder is
     ITradeFactorySwapper
 {
     enum SwapType {
+        NULL,
         AERODROME,
         UNISWAP_V3,
         TRADE_FACTORY

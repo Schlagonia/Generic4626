@@ -75,6 +75,11 @@ contract MorphoOperationTest is OperationTest {
     }
 
     function test_uniswapV3_swap() public {
+        console.log(uint256(IMorphoCompounder.SwapType.UNISWAP_V3));
+        console.log(uint256(IMorphoCompounder.SwapType.AUCTION));
+
+        assertTrue(false);
+
         uint256 amount = 1000e6;
         mintAndDepositIntoStrategy(strategy, user, amount);
 

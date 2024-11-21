@@ -6,6 +6,7 @@ import {IStrategyInterface} from "../../../interfaces/IStrategyInterface.sol";
 
 interface IMorphoCompounder is IStrategyInterface, IUniswapV3Swapper {
     enum SwapType {
+        NULL,
         UNISWAP_V3,
         AUCTION
     }

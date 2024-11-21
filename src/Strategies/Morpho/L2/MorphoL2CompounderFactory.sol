@@ -28,7 +28,7 @@ contract MorphoL2CompounderFactory {
     address public keeper;
     address public aprOracle;
 
-    /// @notice Track the deployments. asset => pool => strategy
+    /// @notice Track the deployments. vault => strategy
     mapping(address => address) public deployments;
 
     constructor(
@@ -48,8 +48,7 @@ contract MorphoL2CompounderFactory {
     }
 
     /**
-     * @notice Deploy a new Sturdy Lender.
-     * @dev This will set the msg.sender to all of the permissioned roles.
+     * @notice Deploy a new Morpho L2 Compounder.
      * @param _vault The vault to deploy the strategy for.
      * @return . The address of the new lender.
      */
@@ -67,7 +66,7 @@ contract MorphoL2CompounderFactory {
         );
 
         // We need to use the custom interface with the
-        // tokenized strategies available setters.
+        // tokenized strategies setters.
         IStrategyInterface newStrategy = IStrategyInterface(
             address(new MorphoL2Compounder(_asset, _name, _vault, ROUTER, BASE))
         );
