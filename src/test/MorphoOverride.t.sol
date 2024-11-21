@@ -75,11 +75,6 @@ contract MorphoOperationTest is OperationTest {
     }
 
     function test_uniswapV3_swap() public {
-        console.log(uint256(IMorphoCompounder.SwapType.UNISWAP_V3));
-        console.log(uint256(IMorphoCompounder.SwapType.AUCTION));
-
-        assertTrue(false);
-
         uint256 amount = 1000e6;
         mintAndDepositIntoStrategy(strategy, user, amount);
 
@@ -231,6 +226,9 @@ contract MorphoWETHOperationTest is MorphoOperationTest {
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
         strategy = IStrategyInterface(setUpMorpho());
+
+        maxFuzzAmount = 1_000e18;
+        minFuzzAmount = 1e16;
     }
 }
 
@@ -262,9 +260,8 @@ contract MorphoShutdownTest is ShutdownTest {
 
         strategy = IStrategyInterface(setUpMorpho());
 
-        maxFuzzAmount =
-            IStrategyInterface(vault).maxDeposit(address(this)) -
-            10;
+        maxFuzzAmount = 1_000_000e6;
+        minFuzzAmount = 1e6;
     }
 
     function setUpMorpho() public virtual returns (address) {

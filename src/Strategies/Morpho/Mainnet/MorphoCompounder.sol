@@ -125,8 +125,6 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
             if (balance > minAmountToSellMapping[token]) {
                 if (_swapType == SwapType.UNISWAP_V3) {
                     _swapFrom(token, address(asset), balance, 0);
-                } else if (_swapType == SwapType.AUCTION) {
-                    _kickAuction(token);
                 }
             }
         }
