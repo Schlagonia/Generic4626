@@ -64,6 +64,8 @@ contract ShutdownTest is Setup {
         vm.prank(management);
         strategy.emergencyWithdraw(2 ** 256 - 1);
 
+        assertGe(asset.balanceOf(address(strategy)), _amount, "!asset balance");
+
         assertEq(strategy.totalAssets(), _amount, "!totalAssets");
 
         // Make sure we can still withdraw the full amount

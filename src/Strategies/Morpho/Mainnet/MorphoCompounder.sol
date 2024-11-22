@@ -60,6 +60,7 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
             }
         }
         delete swapType[_token];
+        delete minAmountToSellMapping[_token];
     }
 
     function getAllRewardTokens() external view returns (address[] memory) {
