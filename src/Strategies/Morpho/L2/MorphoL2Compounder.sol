@@ -6,6 +6,10 @@ import {UniswapV3Swapper} from "@periphery/swappers/UniswapV3Swapper.sol";
 import {TradeFactorySwapper} from "@periphery/swappers/TradeFactorySwapper.sol";
 import {Base4626Compounder, ERC20, Math} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 
+interface IRouter {
+    function factory() external view returns (address);
+}
+
 contract MorphoL2Compounder is
     Base4626Compounder,
     TradeFactorySwapper,

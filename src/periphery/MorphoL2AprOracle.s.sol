@@ -13,7 +13,7 @@ interface IOracle {
     function latestAnswer() external view returns (int256);
 }
 
-contract MorphoAprOracle is AprOracleBase {
+contract MorphoL2AprOracle is AprOracleBase {
     using MorphoBalancesLib for IMorpho;
 
     constructor() AprOracleBase("Morpho Apr Oracle", msg.sender) {}
@@ -22,10 +22,10 @@ contract MorphoAprOracle is AprOracleBase {
         IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
 
     IOracle internal constant WETH_USD_ORACLE =
-        IOracle(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+        IOracle(0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70);
 
     address internal constant UNIV3_MORPHO_WETH_POOL =
-        0x25b96761e765b9AC20db18fA57Fa91e3b617Ec6F;
+        0x2F42Df4aF5312B492E9d7F7b2110D9c7bf2D9e4F;
 
     uint160 internal constant MIN_SQRT_RATIO = 4295128739;
     uint160 internal constant MAX_SQRT_RATIO =
@@ -35,7 +35,7 @@ contract MorphoAprOracle is AprOracleBase {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant SECONDS_PER_YEAR = 31_556_952;
 
-    uint256 public morphoRate = 52.9e18;
+    uint256 public morphoRate = 26.45e18;
 
     uint256 internal constant PER = 1_000e8;
 
@@ -76,9 +76,9 @@ contract MorphoAprOracle is AprOracleBase {
     function getRewardsRate() public view virtual returns (uint256) {
         (, int256 _rewardAmountWeth) = Simulate.simulateSwap(
             IUniswapV3Pool(UNIV3_MORPHO_WETH_POOL),
-            true, // zeroForOne, Morpho < WETH
+            false, // zeroForOne, Morpho > WETH
             int256(morphoRate),
-            MIN_SQRT_RATIO + 1
+            MAX_SQRT_RATIO - 1
         );
 
         return

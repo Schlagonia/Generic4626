@@ -6,9 +6,10 @@ import {Setup, ERC20, IStrategyInterface} from "./utils/Setup.sol";
 
 import {OperationTest} from "./Operation.t.sol";
 import {ShutdownTest} from "./Shutdown.t.sol";
-
+import {OracleTest, StrategyAprOracle} from "./Oracle.t.sol";
 import {IAeroRouter} from "../interfaces/Aero/IAeroRouter.sol";
 
+import {MorphoL2AprOracle} from "../periphery/MorphoL2AprOracle.s.sol";
 import {IMorphoL2Compounder} from "../Strategies/Morpho/interfaces/IMorphoL2Compounder.sol";
 import {MorphoL2CompounderFactory} from "../Strategies/Morpho/L2/MorphoL2CompounderFactory.sol";
 
@@ -22,7 +23,7 @@ contract MorphoL2OperationTest is OperationTest {
 
     address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
 
-    address public router = 0x2626664c2603336E57B271c5C0b26F421741e481;
+    address public router = 0xf6D01e649B5982c50C552f0cFa6eF61A3065Ec48;
     address public base = 0x4200000000000000000000000000000000000006;
 
     function setUp() public virtual override {
@@ -141,10 +142,13 @@ contract MorphoL2OperationTest is OperationTest {
         );
 
         vm.prank(management);
+        IMorphoL2Compounder(address(strategy)).setUniFees(swapToken, base, 500);
+
+        vm.prank(management);
         IMorphoL2Compounder(address(strategy)).setUniFees(
-            swapToken,
+            base,
             address(asset),
-            100
+            500
         );
 
         airdrop(ERC20(swapToken), address(strategy), amount);
@@ -160,7 +164,8 @@ contract MorphoL2OperationTest is OperationTest {
         strategy.report();
 
         assertEq(ERC20(swapToken).balanceOf(address(strategy)), 0, "!swap");
-        assertGt(asset.balanceOf(address(strategy)), 0, "!asset");
+        assertEq(asset.balanceOf(address(strategy)), 0, "!asset");
+        assertGt(strategy.totalAssets(), amount, "!totalAssets");
     }
 
     function test_allRewardTokens() public {
@@ -269,7 +274,7 @@ contract MorphoL2ShutdownTest is ShutdownTest {
 
     address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
 
-    address public router = 0x2626664c2603336E57B271c5C0b26F421741e481;
+    address public router = 0xf6D01e649B5982c50C552f0cFa6eF61A3065Ec48;
     address public base = 0x4200000000000000000000000000000000000006;
 
     function setUp() public virtual override {
@@ -297,6 +302,69 @@ contract MorphoL2ShutdownTest is ShutdownTest {
             10;
 
         factory = strategy.FACTORY();
+
+        // label all the used addresses for traces
+        vm.label(keeper, "keeper");
+        vm.label(factory, "factory");
+        vm.label(address(asset), "asset");
+        vm.label(management, "management");
+        vm.label(address(strategy), "strategy");
+        vm.label(performanceFeeRecipient, "performanceFeeRecipient");
+    }
+
+    function setUpMorpho() public virtual returns (address) {
+        // we save the strategy as a IStrategyInterface to give it the needed interface
+        IStrategyInterface _strategy = IStrategyInterface(
+            morphoL2CompounderFactory.newMorphoCompounder(vault)
+        );
+
+        vm.startPrank(management);
+        _strategy.acceptManagement();
+        vm.stopPrank();
+
+        return address(_strategy);
+    }
+}
+
+contract MorphoL2OracleTest is OracleTest {
+    MorphoL2CompounderFactory public morphoL2CompounderFactory;
+
+    address internal constant AERODROME_FACTORY =
+        0x420DD381b31aEf6683db6B902084cB0FFECe40Da;
+
+    address public swapToken;
+
+    address public constant SMS = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
+
+    address public router = 0xf6D01e649B5982c50C552f0cFa6eF61A3065Ec48;
+    address public base = 0x4200000000000000000000000000000000000006;
+
+    function setUp() public virtual override {
+        vm.createSelectFork(vm.envString("BASE_RPC_URL"));
+
+        swapToken = 0xA88594D404727625A9437C3f886C7643872296AE;
+
+        morphoL2CompounderFactory = new MorphoL2CompounderFactory(
+            management,
+            performanceFeeRecipient,
+            keeper,
+            SMS,
+            router,
+            base
+        );
+
+        vault = 0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca;
+
+        asset = ERC20(address(IStrategyInterface(vault).asset()));
+
+        strategy = IStrategyInterface(setUpMorpho());
+
+        maxFuzzAmount = 1_000_000e6;
+        minFuzzAmount = 1e6;
+
+        factory = strategy.FACTORY();
+
+        oracle = StrategyAprOracle(address(new MorphoL2AprOracle()));
 
         // label all the used addresses for traces
         vm.label(keeper, "keeper");
