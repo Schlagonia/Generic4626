@@ -13,8 +13,6 @@ interface IOracle {
     function latestAnswer() external view returns (int256);
 }
 
-import "forge-std/console.sol";
-
 contract MorphoAprOracle is AprOracleBase {
     using MorphoBalancesLib for IMorpho;
 

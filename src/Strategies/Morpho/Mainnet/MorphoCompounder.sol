@@ -50,12 +50,11 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
 
     function removeRewardToken(address _token) external onlyManagement {
         address[] memory _allRewardTokens = allRewardTokens;
+        uint256 _length = _allRewardTokens.length;
 
-        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+        for (uint256 i = 0; i < _length; i++) {
             if (_allRewardTokens[i] == _token) {
-                allRewardTokens[i] = _allRewardTokens[
-                    _allRewardTokens.length - 1
-                ];
+                allRewardTokens[i] = _allRewardTokens[_length - 1];
                 allRewardTokens.pop();
             }
         }
@@ -117,8 +116,9 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
 
     function _claimAndSellRewards() internal override {
         address[] memory _allRewardTokens = allRewardTokens;
+        uint256 _length = _allRewardTokens.length;
 
-        for (uint256 i = 0; i < _allRewardTokens.length; i++) {
+        for (uint256 i = 0; i < _length; i++) {
             address token = _allRewardTokens[i];
             SwapType _swapType = swapType[token];
             uint256 balance = ERC20(token).balanceOf(address(this));
