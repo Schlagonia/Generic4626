@@ -8,7 +8,7 @@ import {StrategyAprOracle} from "../periphery/StrategyAprOracle.sol";
 contract OracleTest is Setup {
     StrategyAprOracle public oracle;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         oracle = new StrategyAprOracle();
     }
@@ -24,16 +24,21 @@ contract OracleTest is Setup {
         assertLt(currentApr, 1e18, "+100%");
 
         // TODO: Uncomment to test the apr goes up and down based on debt changes
-        /**
-        uint256 negativeDebtChangeApr = oracle.aprAfterDebtChange(_strategy, -int256(_delta));
+
+        uint256 negativeDebtChangeApr = oracle.aprAfterDebtChange(
+            _strategy,
+            -int256(_delta)
+        );
 
         // The apr should go up if deposits go down
         assertLt(currentApr, negativeDebtChangeApr, "negative change");
 
-        uint256 positiveDebtChangeApr = oracle.aprAfterDebtChange(_strategy, int256(_delta));
+        uint256 positiveDebtChangeApr = oracle.aprAfterDebtChange(
+            _strategy,
+            int256(_delta)
+        );
 
         assertGt(currentApr, positiveDebtChangeApr, "positive change");
-        */
 
         // TODO: Uncomment if there are setter functions to test.
         /**
