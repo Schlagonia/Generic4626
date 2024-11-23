@@ -67,6 +67,7 @@ contract MorphoL2Compounder is
             }
         }
         delete swapType[_token];
+        delete minAmountToSellMapping[_token];
     }
 
     function getAllRewardTokens() external view returns (address[] memory) {
