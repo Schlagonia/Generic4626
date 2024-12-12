@@ -9,7 +9,7 @@ import {ShutdownTest} from "./Shutdown.t.sol";
 import {OracleTest, StrategyAprOracle} from "./Oracle.t.sol";
 import {IAeroRouter} from "../interfaces/Aero/IAeroRouter.sol";
 
-import {MorphoL2AprOracle} from "../periphery/MorphoL2AprOracle.s.sol";
+import {MorphoL2AprOracle} from "../periphery/MorphoL2AprOracle.sol";
 import {IMorphoL2Compounder} from "../Strategies/Morpho/interfaces/IMorphoL2Compounder.sol";
 import {MorphoL2CompounderFactory} from "../Strategies/Morpho/L2/MorphoL2CompounderFactory.sol";
 

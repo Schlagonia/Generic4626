@@ -3,7 +3,7 @@ pragma solidity >=0.8.18;
 
 import "forge-std/Script.sol";
 
-import {MorphoAprOracle} from "../src/periphery/MorphoAprOracle.sol";
+import {MorphoL2AprOracle} from "../src/periphery/MorphoL2AprOracle.sol";
 import {MorphoL2CompounderFactory} from "../src/Strategies/Morpho/L2/MorphoL2CompounderFactory.sol";
 
 import {IStrategyInterface} from "../src/interfaces/IStrategyInterface.sol";
@@ -27,10 +27,11 @@ contract Deploy is Script {
     function run() external {
         vm.startBroadcast();
 
-        //MorphoAprOracle oracle = new MorphoAprOracle();
+        MorphoL2AprOracle oracle = new MorphoL2AprOracle();
 
-        //console.log("Apr Oracle is ", address(oracle));
+        console.log("Apr Oracle is ", address(oracle));
 
+        /** 
         MorphoL2CompounderFactory factory = new MorphoL2CompounderFactory(
             management,
             management,
@@ -53,7 +54,7 @@ contract Deploy is Script {
         //factory.setOracle(address(oracle));
 
         //IOracle(0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92).setOracle(strategy, address(oracle));
-
+        */
         vm.stopBroadcast();
     }
 }

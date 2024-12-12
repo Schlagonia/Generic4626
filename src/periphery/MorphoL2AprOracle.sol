@@ -24,6 +24,9 @@ contract MorphoL2AprOracle is AprOracleBase {
     IOracle internal constant WETH_USD_ORACLE =
         IOracle(0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70);
 
+    IOracle internal constant WELL_USD_ORACLE =
+        IOracle(0xBBF812FC0e45F58121983bd07C5079fF74433a61);
+
     address internal constant UNIV3_MORPHO_WETH_POOL =
         0x2F42Df4aF5312B492E9d7F7b2110D9c7bf2D9e4F;
 
@@ -36,6 +39,8 @@ contract MorphoL2AprOracle is AprOracleBase {
     uint256 internal constant SECONDS_PER_YEAR = 31_556_952;
 
     uint256 public morphoRate = 26.45e18;
+
+    uint256 public wellRate = 1_500e18;
 
     uint256 internal constant PER = 1_000e8;
 
@@ -74,7 +79,7 @@ contract MorphoL2AprOracle is AprOracleBase {
     }
 
     function getRewardsRate() public view virtual returns (uint256) {
-        (, int256 _rewardAmountWeth) = Simulate.simulateSwap(
+        (int256 _rewardAmountWeth, ) = Simulate.simulateSwap(
             IUniswapV3Pool(UNIV3_MORPHO_WETH_POOL),
             false, // zeroForOne, Morpho > WETH
             int256(morphoRate),
@@ -82,8 +87,9 @@ contract MorphoL2AprOracle is AprOracleBase {
         );
 
         return
-            (uint256(WETH_USD_ORACLE.latestAnswer()) *
-                uint256(-_rewardAmountWeth)) / PER;
+            ((uint256(WETH_USD_ORACLE.latestAnswer()) *
+                uint256(-_rewardAmountWeth)) +
+                (uint256(WELL_USD_ORACLE.latestAnswer()) * wellRate)) / PER;
     }
 
     function getUnderlyingYield(
@@ -91,12 +97,12 @@ contract MorphoL2AprOracle is AprOracleBase {
         int256 _delta
     ) public view virtual returns (uint256) {
         IMetaMorpho metaMorpho = IMetaMorpho(_vault);
-        uint256 queueLength = metaMorpho.supplyQueueLength();
+        uint256 queueLength = metaMorpho.withdrawQueueLength();
         uint256 totalAssets = metaMorpho.totalAssets();
 
         uint256 rate = 0;
         for (uint256 i = 0; i < queueLength; i++) {
-            Id id = metaMorpho.supplyQueue(i);
+            Id id = metaMorpho.withdrawQueue(i);
             MarketParams memory marketParams = MORPHO.idToMarketParams(id);
 
             if (marketParams.irm == address(0)) continue;
@@ -146,5 +152,9 @@ contract MorphoL2AprOracle is AprOracleBase {
         uint256 _morphoRate
     ) external virtual onlyGovernance {
         morphoRate = _morphoRate;
+    }
+
+    function setWellRate(uint256 _wellRate) external virtual onlyGovernance {
+        wellRate = _wellRate;
     }
 }

@@ -24,7 +24,6 @@ contract OracleTest is Setup {
         assertLt(currentApr, 1e18, "+100%");
 
         console.log("Current Apr is ", currentApr);
-        assertTrue(false);
 
         // TODO: Uncomment to test the apr goes up and down based on debt changes
 
