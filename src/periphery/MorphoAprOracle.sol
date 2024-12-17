@@ -35,7 +35,7 @@ contract MorphoAprOracle is AprOracleBase {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant SECONDS_PER_YEAR = 31_556_952;
 
-    uint256 public morphoRate = 52.9e18;
+    uint256 public morphoRate = 26.45e18;
 
     uint256 internal constant PER = 1_000e8;
 
@@ -91,12 +91,12 @@ contract MorphoAprOracle is AprOracleBase {
         int256 _delta
     ) public view virtual returns (uint256) {
         IMetaMorpho metaMorpho = IMetaMorpho(_vault);
-        uint256 queueLength = metaMorpho.supplyQueueLength();
+        uint256 queueLength = metaMorpho.withdrawQueueLength();
         uint256 totalAssets = metaMorpho.totalAssets();
 
         uint256 rate = 0;
         for (uint256 i = 0; i < queueLength; i++) {
-            Id id = metaMorpho.supplyQueue(i);
+            Id id = metaMorpho.withdrawQueue(i);
             MarketParams memory marketParams = MORPHO.idToMarketParams(id);
 
             if (marketParams.irm == address(0)) continue;
@@ -133,7 +133,7 @@ contract MorphoAprOracle is AprOracleBase {
                 WAD /
                 WAD;
 
-            rate += supplyAPY * newSupplyAssets;
+            rate += supplyAPY * uint256(int256(suppliedAssets) + marketChange);
         }
 
         // Account for the fee

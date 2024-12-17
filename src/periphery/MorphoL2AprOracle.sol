@@ -139,7 +139,7 @@ contract MorphoL2AprOracle is AprOracleBase {
                 WAD /
                 WAD;
 
-            rate += supplyAPY * newSupplyAssets;
+            rate += supplyAPY * uint256(int256(suppliedAssets) + marketChange);
         }
 
         // Account for the fee
