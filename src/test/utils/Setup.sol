@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
-
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Base4626Compounder, ERC20} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
@@ -20,6 +20,7 @@ interface IFactory {
 }
 
 contract Setup is ExtendedTest, IEvents {
+    using SafeERC20 for ERC20;
     // Contract instances that we will use repeatedly.
     ERC20 public asset;
     IStrategyInterface public strategy;
@@ -105,7 +106,7 @@ contract Setup is ExtendedTest, IEvents {
         uint256 _amount
     ) public {
         vm.prank(_user);
-        asset.approve(address(_strategy), _amount);
+        asset.forceApprove(address(_strategy), _amount);
 
         vm.prank(_user);
         _strategy.deposit(_amount, _user);

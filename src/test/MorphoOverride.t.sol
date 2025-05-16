@@ -310,7 +310,7 @@ contract MorphoOracleTest is OracleTest {
     function setUp() public virtual override {
         super.setUp();
 
-        swapToken = tokenAddrs["USDT"];
+        swapToken = tokenAddrs["LINK"];
 
         morphoCompounderFactory = new MorphoCompounderFactory(
             management,
@@ -320,7 +320,7 @@ contract MorphoOracleTest is OracleTest {
         );
 
         // Usual Boosted USDC vault
-        vault = 0xd63070114470f685b75B74D60EEc7c1113d33a3D;
+        vault = 0x8CB3649114051cA5119141a34C200D65dc0Faa73;
 
         asset = ERC20(address(IStrategyInterface(vault).asset()));
 
@@ -330,6 +330,8 @@ contract MorphoOracleTest is OracleTest {
         minFuzzAmount = 1e6;
 
         oracle = StrategyAprOracle(address(new MorphoAprOracle()));
+
+        MorphoAprOracle(address(oracle)).setMorphoRate(vault, 6898500000000000);
     }
 
     function setUpMorpho() public virtual returns (address) {
@@ -360,5 +362,11 @@ contract MorphoOracleTest is OracleTest {
 
         vm.stopPrank();
         return address(_strategy);
+    }
+
+    function test_oracle(uint256 _amount, uint16 _percentChange) public virtual override {
+        uint256 rewardsRate = MorphoAprOracle(address(oracle)).getRewardsRate(vault);
+        console.log("Rewards rate is ", rewardsRate);
+        super.test_oracle(_amount, _percentChange);
     }
 }

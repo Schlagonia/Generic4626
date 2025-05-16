@@ -35,9 +35,9 @@ contract MorphoAprOracle is AprOracleBase {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant SECONDS_PER_YEAR = 31_556_952;
 
-    uint256 public morphoRate = 26.45e18;
+    mapping(address => uint256) public morphoRate;
 
-    uint256 internal constant PER = 1_000e8;
+    uint256 public per = 1e8;
 
     /**
      * @notice Will return the expected Apr of a strategy post a debt change.
@@ -62,28 +62,34 @@ contract MorphoAprOracle is AprOracleBase {
         address _strategy,
         int256 _delta
     ) external view virtual override returns (uint256) {
+        address _vault = IMorphoCompounder(_strategy).vault();
         uint256 underlyingYield = getUnderlyingYield(
-            IMorphoCompounder(_strategy).vault(),
+            _vault,
             _delta
         );
 
         // Give a buffer for the rewards rate
-        uint256 rewardsRate = (getRewardsRate() * 9_500) / MAX_BPS;
+        uint256 rewardsRate = (getRewardsRate(_vault) * 9_500) / MAX_BPS;
 
         return rewardsRate + underlyingYield;
     }
 
-    function getRewardsRate() public view virtual returns (uint256) {
+    function getRewardsRate(address _vault) public view virtual returns (uint256) {
+        uint256 _morphoRate = morphoRate[_vault];
+        if (_morphoRate == 0) {
+            return 0;
+        }
+
         (, int256 _rewardAmountWeth) = Simulate.simulateSwap(
             IUniswapV3Pool(UNIV3_MORPHO_WETH_POOL),
             true, // zeroForOne, Morpho < WETH
-            int256(morphoRate),
+            int256(_morphoRate),
             MIN_SQRT_RATIO + 1
         );
 
         return
             (uint256(WETH_USD_ORACLE.latestAnswer()) *
-                uint256(-_rewardAmountWeth)) / PER;
+                uint256(-_rewardAmountWeth)) / per;
     }
 
     function getUnderlyingYield(
@@ -143,8 +149,13 @@ contract MorphoAprOracle is AprOracleBase {
     }
 
     function setMorphoRate(
+        address _vault,
         uint256 _morphoRate
     ) external virtual onlyGovernance {
-        morphoRate = _morphoRate;
+        morphoRate[_vault] = _morphoRate;
+    }
+
+    function setPer(uint256 _per) external virtual onlyGovernance {
+        per = _per;
     }
 }

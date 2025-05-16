@@ -32,6 +32,8 @@ contract OracleTest is Setup {
             -int256(_delta)
         );
 
+        console.log("Negative debt change apr is ", negativeDebtChangeApr);
+
         // The apr should go up if deposits go down
         assertLt(currentApr, negativeDebtChangeApr, "negative change");
 
@@ -39,6 +41,8 @@ contract OracleTest is Setup {
             _strategy,
             int256(_delta)
         );
+
+        console.log("Positive debt change apr is ", positiveDebtChangeApr);
 
         assertGt(currentApr, positiveDebtChangeApr, "positive change");
 
@@ -55,7 +59,7 @@ contract OracleTest is Setup {
         */
     }
 
-    function test_oracle(uint256 _amount, uint16 _percentChange) public {
+    function test_oracle(uint256 _amount, uint16 _percentChange) public virtual  {
         vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
         _percentChange = uint16(bound(uint256(_percentChange), 10, MAX_BPS));
 
