@@ -148,10 +148,23 @@ contract MorphoAprOracle is AprOracleBase {
                 (WAD - IMetaMorpho(_vault).fee())) / WAD;
     }
 
+    function setMorphoRates(
+        address[] memory _vaults,
+        uint256[] memory _morphoRates
+    ) external virtual onlyGovernance {
+        for (uint256 i = 0; i < _vaults.length; i++) {
+            _setMorphoRate(_vaults[i], _morphoRates[i]);
+        }
+    }
+    
     function setMorphoRate(
         address _vault,
         uint256 _morphoRate
     ) external virtual onlyGovernance {
+        _setMorphoRate(_vault, _morphoRate);
+    }
+
+    function _setMorphoRate(address _vault, uint256 _morphoRate) internal {
         morphoRate[_vault] = _morphoRate;
     }
 
