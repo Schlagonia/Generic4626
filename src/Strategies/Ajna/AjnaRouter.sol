@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.18;
+pragma solidity ^0.8.18;
 
 // We use the Tokenized Strategy interface.
 import {Base4626Compounder, ERC20, SafeERC20, IStrategy, Math} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";

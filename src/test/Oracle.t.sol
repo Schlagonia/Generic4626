@@ -8,7 +8,7 @@ import {StrategyAprOracle} from "../periphery/StrategyAprOracle.sol";
 contract OracleTest is Setup {
     StrategyAprOracle public oracle;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         oracle = new StrategyAprOracle();
     }
@@ -23,17 +23,28 @@ contract OracleTest is Setup {
         assertGt(currentApr, 0, "ZERO");
         assertLt(currentApr, 1e18, "+100%");
 
+        console.log("Current Apr is ", currentApr);
+
         // TODO: Uncomment to test the apr goes up and down based on debt changes
-        /**
-        uint256 negativeDebtChangeApr = oracle.aprAfterDebtChange(_strategy, -int256(_delta));
+
+        uint256 negativeDebtChangeApr = oracle.aprAfterDebtChange(
+            _strategy,
+            -int256(_delta)
+        );
+
+        console.log("Negative debt change apr is ", negativeDebtChangeApr);
 
         // The apr should go up if deposits go down
         assertLt(currentApr, negativeDebtChangeApr, "negative change");
 
-        uint256 positiveDebtChangeApr = oracle.aprAfterDebtChange(_strategy, int256(_delta));
+        uint256 positiveDebtChangeApr = oracle.aprAfterDebtChange(
+            _strategy,
+            int256(_delta)
+        );
+
+        console.log("Positive debt change apr is ", positiveDebtChangeApr);
 
         assertGt(currentApr, positiveDebtChangeApr, "positive change");
-        */
 
         // TODO: Uncomment if there are setter functions to test.
         /**
@@ -48,7 +59,7 @@ contract OracleTest is Setup {
         */
     }
 
-    function test_oracle(uint256 _amount, uint16 _percentChange) public {
+    function test_oracle(uint256 _amount, uint16 _percentChange) public virtual  {
         vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
         _percentChange = uint16(bound(uint256(_percentChange), 10, MAX_BPS));
 

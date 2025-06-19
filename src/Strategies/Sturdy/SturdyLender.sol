@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.18;
+pragma solidity ^0.8.18;
 
 import {Base4626Compounder} from "@periphery/Bases/4626Compounder/Base4626Compounder.sol";
 import {AuctionSwapper, Auction} from "@periphery/swappers/AuctionSwapper.sol";
@@ -23,14 +23,14 @@ contract SturdyLender is Base4626Compounder, AuctionSwapper {
         auction = _auction;
     }
 
-    function _auctionKicked(
+    function auctionKicked(
         address _token
-    ) internal virtual override returns (uint256 _kicked) {
+    ) external virtual onlyKeepers returns (uint256 _kicked) {
         require(
             _token != address(asset) && _token != address(vault),
             "!allowed"
         );
-        _kicked = super._auctionKicked(_token);
+        _kicked = super._kickAuction(_token);
         require(_kicked >= minAmountToSellMapping[_token], "too little");
     }
 

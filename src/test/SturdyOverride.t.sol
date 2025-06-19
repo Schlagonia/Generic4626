@@ -13,6 +13,7 @@ import {IAuctionSwapper} from "@periphery/swappers/interfaces/IAuctionSwapper.so
 
 interface ISturdyLender is IAuctionSwapper {
     function setAuction(address _auction) external;
+    function auctionKicked(address _token) external returns (uint256 _kicked);
 }
 
 contract SturdyOperationTest is OperationTest {
@@ -57,16 +58,12 @@ contract SturdyOperationTest is OperationTest {
             ISturdyLender(address(strategy)).auctionFactory()
         ).createNewAuction(address(asset), address(strategy), management);
 
-        // Use kickable and kick hooks.
-        vm.prank(management);
-        Auction(_auction).setHookFlags(true, true, false, false);
-
         address rewardToken = tokenAddrs["USDC"];
         address buyer = address(123);
 
         // Enable the auction
         vm.prank(management);
-        bytes32 _id = Auction(_auction).enable(rewardToken, address(strategy));
+        Auction(_auction).enable(rewardToken);
 
         // Auction must have asset as want.
         address _badAuction = AuctionFactory(
@@ -81,7 +78,7 @@ contract SturdyOperationTest is OperationTest {
         ISturdyLender(address(strategy)).setAuction(_auction);
 
         vm.expectRevert("!allowed");
-        vm.prank(_auction);
+        vm.prank(management);
         ISturdyLender(address(strategy)).auctionKicked(address(asset));
 
         // Deposit into strategy
@@ -94,18 +91,26 @@ contract SturdyOperationTest is OperationTest {
         // Scale from crv usd decimals down to usdc
         uint256 toDrop = (_amount * _profitFactor) / MAX_BPS / 1e12;
 
-        assertEq(Auction(_auction).kickable(_id), 0);
+        assertEq(Auction(_auction).kickable(rewardToken), 0);
         vm.expectRevert("nothing to kick");
-        Auction(_auction).kick(_id);
+        Auction(_auction).kick(rewardToken);
 
         airdrop(ERC20(rewardToken), address(strategy), toDrop);
 
-        assertEq(Auction(_auction).kickable(_id), toDrop);
-        assertEq(Auction(_auction).kick(_id), toDrop);
+        assertEq(Auction(_auction).kickable(rewardToken), 0);
+
+        vm.prank(management);
+        assertEq(
+            ISturdyLender(address(strategy)).auctionKicked(rewardToken),
+            toDrop
+        );
 
         skip(Auction(_auction).auctionLength() / 2);
 
-        uint256 amountNeeded = Auction(_auction).getAmountNeeded(_id, toDrop);
+        uint256 amountNeeded = Auction(_auction).getAmountNeeded(
+            rewardToken,
+            toDrop
+        );
         assertGt(amountNeeded, 1);
 
         airdrop(asset, buyer, amountNeeded);
@@ -118,7 +123,7 @@ contract SturdyOperationTest is OperationTest {
         asset.approve(_auction, amountNeeded);
 
         vm.prank(buyer);
-        Auction(_auction).take(_id);
+        Auction(_auction).take(rewardToken);
 
         assertEq(asset.balanceOf(address(strategy)), amountNeeded);
         assertEq(ERC20(rewardToken).balanceOf(address(strategy)), 0);

@@ -72,7 +72,7 @@ contract OperationTest is Setup {
 
         // TODO: implement logic to simulate earning interest.
         uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+        earnProfit(toAirdrop);
 
         // Report profit
         vm.prank(keeper);
@@ -119,7 +119,7 @@ contract OperationTest is Setup {
 
         // TODO: implement logic to simulate earning interest.
         uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+        earnProfit(toAirdrop);
 
         // Report profit
         vm.prank(keeper);
