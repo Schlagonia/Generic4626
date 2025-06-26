@@ -6,7 +6,7 @@ import {Setup, ERC20, IStrategyInterface} from "./utils/Setup.sol";
 
 contract FunctionSignatureTest is Setup {
     function setUp() public virtual override {
-        super.setUp();
+        //super.setUp();
     }
 
     // This test should not be overridden and checks that
