@@ -35,8 +35,7 @@ contract MorphoCompounder is Base4626Compounder, UniswapV3Swapper {
         string memory _name,
         address _vault
     ) Base4626Compounder(_asset, _name, _vault) {
-        router = 0x4e1d81A3E627b9294532e990109e4c21d217376C;
-        base = 0xEE7D8BCFb72bC1880D0Cf19822eB0A2e6577aB62;
+        base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     }
 
     function addRewardToken(

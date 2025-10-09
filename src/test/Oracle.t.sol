@@ -59,7 +59,10 @@ contract OracleTest is Setup {
         */
     }
 
-    function test_oracle(uint256 _amount, uint16 _percentChange) public virtual  {
+    function test_oracle(
+        uint256 _amount,
+        uint16 _percentChange
+    ) public virtual {
         vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
         _percentChange = uint16(bound(uint256(_percentChange), 10, MAX_BPS));
 

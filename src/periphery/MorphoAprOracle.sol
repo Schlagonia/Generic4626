@@ -63,10 +63,7 @@ contract MorphoAprOracle is AprOracleBase {
         int256 _delta
     ) external view virtual override returns (uint256) {
         address _vault = IMorphoCompounder(_strategy).vault();
-        uint256 underlyingYield = getUnderlyingYield(
-            _vault,
-            _delta
-        );
+        uint256 underlyingYield = getUnderlyingYield(_vault, _delta);
 
         // Give a buffer for the rewards rate
         uint256 rewardsRate = (getRewardsRate(_vault) * 9_500) / MAX_BPS;
@@ -74,7 +71,9 @@ contract MorphoAprOracle is AprOracleBase {
         return rewardsRate + underlyingYield;
     }
 
-    function getRewardsRate(address _vault) public view virtual returns (uint256) {
+    function getRewardsRate(
+        address _vault
+    ) public view virtual returns (uint256) {
         uint256 _morphoRate = morphoRate[_vault];
         if (_morphoRate == 0) {
             return 0;
@@ -156,7 +155,7 @@ contract MorphoAprOracle is AprOracleBase {
             _setMorphoRate(_vaults[i], _morphoRates[i]);
         }
     }
-    
+
     function setMorphoRate(
         address _vault,
         uint256 _morphoRate

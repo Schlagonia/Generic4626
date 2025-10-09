@@ -23,7 +23,7 @@ contract MorphoGenericAprOracle is AprOracleBase {
     constructor() AprOracleBase("Morpho Apr Oracle", msg.sender) {}
 
     IMorpho internal constant MORPHO =
-        IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
+        IMorpho(0x1bF0c2541F820E775182832f06c0B7Fc27A25f67);
 
     uint256 internal constant MAX_BPS = 10_000;
     uint256 internal constant WAD = 1e18;
@@ -57,10 +57,7 @@ contract MorphoGenericAprOracle is AprOracleBase {
         int256 _delta
     ) external view virtual override returns (uint256) {
         address _vault = IMorphoCompounder(_strategy).vault();
-        uint256 underlyingYield = getUnderlyingYield(
-            _vault,
-            _delta
-        );
+        uint256 underlyingYield = getUnderlyingYield(_vault, _delta);
 
         // Give a buffer for the rewards rate
         uint256 rewardsRate = (getRewardsRate(_vault) * 9_500) / MAX_BPS;
@@ -68,7 +65,9 @@ contract MorphoGenericAprOracle is AprOracleBase {
         return rewardsRate + underlyingYield;
     }
 
-    function getRewardsRate(address _vault) public view virtual returns (uint256) {
+    function getRewardsRate(
+        address _vault
+    ) public view virtual returns (uint256) {
         address _rewardOracle = rewardOracles[_vault];
         if (_rewardOracle == address(0)) {
             return 0;
