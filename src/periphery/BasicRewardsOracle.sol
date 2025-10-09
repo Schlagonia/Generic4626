@@ -73,8 +73,6 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     uint256 public constant WAD = 1e18;
     uint256 public constant ORACLE_DECIMALS = 1e8; // Standard oracle decimals (8)
     uint256 public constant SECONDS_PER_YEAR = 31_556_952; // Seconds in a year
-    uint256 public constant MAX_REWARD_TOKENS = 10; // Maximum reward tokens per vault
-    uint256 public constant PRECISION_FACTOR = 1e36; // High precision for calculations
 
     // ========================================
     // ============= STORAGE ==================
@@ -187,15 +185,13 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
                 _tokens.length == _rewardRates.length,
             "Array length mismatch"
         );
-        require(_tokens.length <= MAX_REWARD_TOKENS, "Too many reward tokens");
 
         // Clear existing rewards
         delete vaultRewards[_vault].rewardTokens;
 
         VaultRewards storage rewards = vaultRewards[_vault];
         rewards.assetPriceOracle = _assetPriceOracle;
-        rewards.assetDecimals = ERC20(IStrategyInterface(_vault).asset())
-            .decimals();
+        rewards.assetDecimals = IStrategyInterface(_vault).decimals();
 
         // Add reward tokens
         for (uint256 i = 0; i < _tokens.length; i++) {
