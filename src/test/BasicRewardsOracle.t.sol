@@ -32,7 +32,8 @@ contract BasicRewardsOracleTest is Setup {
     MockPriceOracle public secondRewardTokenOracle;
 
     address public governance = address(1);
-    address public morphoToken;
+    address public morphoToken = 0x58D97B57BB95320F9a05dC918Aef65434969c2B2; // Real MORPHO token
+    address public additionalRewardToken;
     address public wethToken;
 
     function setUp() public virtual override {
@@ -47,27 +48,24 @@ contract BasicRewardsOracleTest is Setup {
         secondRewardTokenOracle = new MockPriceOracle(2000e8, 8); // $2000 per token
 
         // Use existing tokens from Setup
-        morphoToken = tokenAddrs["LINK"]; // Using LINK as mock MORPHO token
+        additionalRewardToken = tokenAddrs["LINK"]; // Additional reward token
         wethToken = tokenAddrs["WETH"];
     }
 
-    function test_basicRewardsCalculation() public {
-        // Setup reward configuration
-        address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+    function test_morphoRewardsCalculation() public {
+        // 100 MORPHO per year for MORPHO rewards
+        uint256 morphoRate = 100e18;
 
-        address[] memory oracles = new address[](1);
-        oracles[0] = address(rewardTokenOracle);
-
-        // 100 tokens per day = ~1.157e15 per second
-        uint256 rewardPerSecond = 1157407407407407407; // 100e18 / 86400
-        uint256[] memory rewardRates = new uint256[](1);
-        rewardRates[0] = rewardPerSecond;
+        // No additional rewards for this test
+        address[] memory tokens = new address[](0);
+        address[] memory oracles = new address[](0);
+        uint256[] memory rewardRates = new uint256[](0);
 
         // Configure rewards as governance
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -82,28 +80,73 @@ contract BasicRewardsOracleTest is Setup {
         uint256 vaultAssets = ERC20(vault).totalSupply();
         console.log("Vault total assets:", vaultAssets);
 
-        // Calculate expected APR
-        // Annual rewards: 100 tokens/day * 365.25 days = 36,525 tokens
-        // Value: 36,525 * $5 = $182,625
-        // TVL will be based on vault's totalAssets
-
+        // Get the APR
         uint256 apr = rewardsOracle.getRewardsRate(address(strategy));
 
-        console.log("Calculated APR:", apr);
+        console.log("MORPHO APR:", apr);
+        console.log("MORPHO APR (%):", (apr * 100) / 1e18);
 
-        // APR should be positive and reasonable
+        // APR should be positive (MORPHO rewards via Uniswap pricing)
         assertGt(apr, 0, "APR should be positive");
         assertLt(apr, 200e18, "APR unreasonably high");
-
-        // Log the actual APR for debugging
-        console.log("Calculated APR (in 1e18):", apr);
-        console.log("Calculated APR (as %):", (apr * 100) / 1e18);
     }
 
-    function test_multipleRewardTokens() public {
-        // Setup multiple reward tokens
+    function test_morphoAndAdditionalRewards() public {
+        // 100 MORPHO per year
+        uint256 morphoRate = 100e18;
+
+        // Setup additional reward token
+        address[] memory tokens = new address[](1);
+        tokens[0] = additionalRewardToken;
+
+        address[] memory oracles = new address[](1);
+        oracles[0] = address(rewardTokenOracle); // $5 per token
+
+        // 100 tokens per day = ~1.157e15 per second
+        uint256[] memory rewardRates = new uint256[](1);
+        rewardRates[0] = 1157407407407407407; // 100e18 / 86400
+
+        // Configure rewards
+        vm.prank(governance);
+        rewardsOracle.setVaultRewards(
+            address(strategy),
+            morphoRate,
+            tokens,
+            oracles,
+            rewardRates,
+            address(assetPriceOracle)
+        );
+
+        // Deposit funds
+        mintAndDepositIntoStrategy(strategy, user, 1_000_000e18);
+
+        // Get total APR
+        uint256 totalApr = rewardsOracle.getRewardsRate(address(strategy));
+
+        // Get MORPHO APR separately
+        uint256 morphoApr = rewardsOracle.getMorphoRewardsRate(
+            address(strategy)
+        );
+
+        console.log("MORPHO APR:", morphoApr);
+        console.log("Total APR:", totalApr);
+
+        // Total APR should be higher than just MORPHO APR
+        assertGt(
+            totalApr,
+            morphoApr,
+            "Total APR should include additional rewards"
+        );
+        assertGt(morphoApr, 0, "MORPHO APR should be positive");
+    }
+
+    function test_multipleAdditionalRewardTokens() public {
+        // 50 MORPHO per year
+        uint256 morphoRate = 50e18;
+
+        // Setup multiple additional reward tokens
         address[] memory tokens = new address[](2);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
         tokens[1] = wethToken;
 
         address[] memory oracles = new address[](2);
@@ -111,13 +154,14 @@ contract BasicRewardsOracleTest is Setup {
         oracles[1] = address(secondRewardTokenOracle); // $2000
 
         uint256[] memory rewardRates = new uint256[](2);
-        rewardRates[0] = 1157407407407407407; // 100 MORPHO per day (100e18 / 86400)
+        rewardRates[0] = 1157407407407407407; // 100 tokens per day (100e18 / 86400)
         rewardRates[1] = 11574074074074074; // 1 WETH per day (1e18 / 86400)
 
-        // Configure rewards
+        // Configure rewards with MORPHO and additional tokens
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -129,12 +173,12 @@ contract BasicRewardsOracleTest is Setup {
 
         uint256 multiTokenApr = rewardsOracle.getRewardsRate(address(strategy));
 
-        // Now update to only use first token
+        // Now update to only MORPHO + first additional token
         rewardRates = new uint256[](1);
         rewardRates[0] = 1157407407407407407; // 100e18 / 86400
 
         tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -142,23 +186,27 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate, // Keep same MORPHO rate
             tokens,
             oracles,
             rewardRates,
             address(assetPriceOracle)
         );
 
-        uint256 singleTokenApr = rewardsOracle.getRewardsRate(
+        uint256 singleAdditionalTokenApr = rewardsOracle.getRewardsRate(
             address(strategy)
         );
 
-        console.log("APR with multiple rewards:", multiTokenApr);
-        console.log("APR with single reward:", singleTokenApr);
+        console.log("APR with multiple additional rewards:", multiTokenApr);
+        console.log(
+            "APR with single additional reward:",
+            singleAdditionalTokenApr
+        );
 
         // Multiple token APR should be higher than single token
         assertGt(
             multiTokenApr,
-            singleTokenApr,
+            singleAdditionalTokenApr,
             "Multiple rewards should give higher APR"
         );
     }
@@ -168,19 +216,15 @@ contract BasicRewardsOracleTest is Setup {
         uint256 apr = rewardsOracle.getRewardsRate(address(strategy));
         assertEq(apr, 0, "APR should be 0 with no rewards");
 
-        // Configure rewards with zero rates
-        address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
-
-        address[] memory oracles = new address[](1);
-        oracles[0] = address(rewardTokenOracle);
-
-        uint256[] memory rewardRates = new uint256[](1);
-        rewardRates[0] = 0;
+        // Configure with zero MORPHO rate and zero additional rewards
+        address[] memory tokens = new address[](0);
+        address[] memory oracles = new address[](0);
+        uint256[] memory rewardRates = new uint256[](0);
 
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            0, // Zero MORPHO rate
             tokens,
             oracles,
             rewardRates,
@@ -188,13 +232,15 @@ contract BasicRewardsOracleTest is Setup {
         );
 
         apr = rewardsOracle.getRewardsRate(address(strategy));
-        assertEq(apr, 0, "APR should be 0 with zero reward rate");
+        assertEq(apr, 0, "APR should be 0 with zero reward rates");
     }
 
-    function test_updateRewardRate() public {
-        // Initial setup
+    function test_updateMorphoRate() public {
+        // Initial setup with MORPHO and additional rewards
+        uint256 morphoRate = 100e18;
+
         address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         address[] memory oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -205,6 +251,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -215,32 +262,25 @@ contract BasicRewardsOracleTest is Setup {
 
         uint256 initialApr = rewardsOracle.getRewardsRate(address(strategy));
 
-        // Double the reward rate
+        // Double the MORPHO rate
         vm.prank(governance);
-        rewardsOracle.updateRewardRate(
-            address(strategy),
-            0,
-            2314814814814814814
-        ); // 200e18 / 86400
+        rewardsOracle.setMorphoRate(address(strategy), 200e18);
 
         uint256 newApr = rewardsOracle.getRewardsRate(address(strategy));
 
         console.log("Initial APR:", initialApr);
-        console.log("New APR:", newApr);
+        console.log("New APR after doubling MORPHO:", newApr);
 
-        // APR should approximately double
-        assertGt(
-            newApr,
-            (initialApr * 195) / 100,
-            "APR didn't increase enough"
-        );
-        assertLt(newApr, (initialApr * 205) / 100, "APR increased too much");
+        // APR should increase (but not necessarily double since we have additional rewards too)
+        assertGt(newApr, initialApr, "APR should increase");
     }
 
     function test_priceOracleUpdate() public {
-        // Setup rewards
+        // Setup with additional rewards (MORPHO price is from Uniswap)
+        uint256 morphoRate = 50e18;
+
         address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         address[] memory oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -251,6 +291,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -280,8 +321,9 @@ contract BasicRewardsOracleTest is Setup {
 
     function test_governanceAccess() public {
         // Try to set rewards as non-governance
+        uint256 morphoRate = 100e18;
         address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         address[] memory oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -293,6 +335,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(user);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -303,34 +346,29 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
             address(assetPriceOracle)
         );
 
-        // Try to update reward rate as non-governance
+        // Try to update MORPHO rate as non-governance
         vm.expectRevert("!governance");
         vm.prank(user);
-        rewardsOracle.updateRewardRate(
-            address(strategy),
-            0,
-            2314814814814814814
-        ); // 200e18 / 86400
+        rewardsOracle.setMorphoRate(address(strategy), 200e18);
 
         // Should work as governance
         vm.prank(governance);
-        rewardsOracle.updateRewardRate(
-            address(strategy),
-            0,
-            2314814814814814814
-        ); // 200e18 / 86400
+        rewardsOracle.setMorphoRate(address(strategy), 200e18);
     }
 
     function test_removeVaultRewards() public {
-        // Setup rewards
+        // Setup rewards with MORPHO and additional token
+        uint256 morphoRate = 100e18;
+
         address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         address[] memory oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -341,6 +379,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -364,8 +403,10 @@ contract BasicRewardsOracleTest is Setup {
 
     function test_stablecoinWithoutOracle() public {
         // Test using a stablecoin without a price oracle (assumes 1:1 with USD)
+        uint256 morphoRate = 50e18;
+
         address[] memory tokens = new address[](1);
-        tokens[0] = morphoToken;
+        tokens[0] = additionalRewardToken;
 
         address[] memory oracles = new address[](1);
         oracles[0] = address(rewardTokenOracle);
@@ -377,6 +418,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,
@@ -393,6 +435,7 @@ contract BasicRewardsOracleTest is Setup {
         vm.prank(governance);
         rewardsOracle.setVaultRewards(
             address(strategy),
+            morphoRate,
             tokens,
             oracles,
             rewardRates,

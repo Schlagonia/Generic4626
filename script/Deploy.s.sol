@@ -33,6 +33,17 @@ contract Deploy is Script {
         MorphoGenericAprOracle oracle = new MorphoGenericAprOracle();
         console.log("Oracle is ", address(oracle));
 
+        address[] memory vaults = new address[](1);
+        vaults[0] = 0x68Aea7b82Df6CcdF76235D46445Ed83f85F845A3;
+        address[] memory rewardOracles = new address[](1);
+        rewardOracles[0] = 0x176CfF10eE6755Ba69F21fF95CEBBE52c2C56ccC;
+
+        oracle.setRewardOracles(vaults, rewardOracles);
+
+        console.log(oracle.aprAfterDebtChange(0x888239Ffa9a0613F9142C808aA9F7d1948a14f75, int256(0)));
+
+        /** 
+
         MorphoCompounderFactory factory = new MorphoCompounderFactory(
             deployer,
             performanceFeeRecipient,
@@ -49,6 +60,7 @@ contract Deploy is Script {
             performanceFeeRecipient,
             keeper
         );
+        */
 
         vm.stopBroadcast();
     }

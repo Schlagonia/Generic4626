@@ -23,7 +23,7 @@ contract MorphoGenericAprOracle is AprOracleBase {
     constructor() AprOracleBase("Morpho Apr Oracle", msg.sender) {}
 
     IMorpho internal constant MORPHO =
-        IMorpho(0x1bF0c2541F820E775182832f06c0B7Fc27A25f67);
+        IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
 
     uint256 internal constant MAX_BPS = 10_000;
     uint256 internal constant WAD = 1e18;

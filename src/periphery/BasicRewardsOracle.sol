@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import {Governance} from "@periphery/utils/Governance.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IStrategyInterface} from "../interfaces/IStrategyInterface.sol";
+import {Simulate, IUniswapV3Pool} from "@uniswap-v3-core/libraries/Simulate.sol";
 
 /**
  * @title IMorphoGenericOracle
@@ -30,8 +31,8 @@ interface IOracle {
 /**
  * @title BasicRewardsOracle
  * @author Your Protocol
- * @notice Oracle for calculating reward APR for Morpho compounders
- * @dev This oracle fetches prices on-chain and calculates APR based on governance-set reward rates
+ * @notice Oracle for calculating reward APR for Morpho compounders including MORPHO rewards
+ * @dev This oracle uses Uniswap V3 for MORPHO pricing and oracle feeds for other tokens
  */
 contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     // ========================================
@@ -54,13 +55,13 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
 
     /**
      * @notice Vault rewards configuration
-     * @param rewardTokens Array of reward tokens for this vault
-     * @param totalValueLocked TVL in asset units (with asset decimals)
+     * @param morphoRate MORPHO tokens per year (set by governance, like morphoRate in MorphoAprOracle)
+     * @param rewardTokens Array of additional reward tokens for this vault
      * @param assetDecimals Decimals of the vault's asset
      * @param assetPriceOracle Price oracle for the vault's asset
-     * @param lastUpdated Timestamp of last update
      */
     struct VaultRewards {
+        uint256 morphoRate; // Annual MORPHO rewards
         RewardToken[] rewardTokens;
         uint8 assetDecimals;
         address assetPriceOracle;
@@ -73,6 +74,12 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     uint256 public constant WAD = 1e18;
     uint256 public constant ORACLE_DECIMALS = 1e8; // Standard oracle decimals (8)
     uint256 public constant SECONDS_PER_YEAR = 31_556_952; // Seconds in a year
+    uint256 public constant MAX_BPS = 10_000;
+
+    // Uniswap V3 sqrt price limits
+    uint160 internal constant MIN_SQRT_RATIO = 4295128739;
+    uint160 internal constant MAX_SQRT_RATIO =
+        1461446703485210103287273052203988822378723970342;
 
     // ========================================
     // ============= STORAGE ==================
@@ -84,11 +91,21 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     /// @notice Default oracle decimals (8 for Chainlink on mainnet)
     uint8 public defaultOracleDecimals = 8;
 
+    /// @notice Global MORPHO pricing configuration
+    address public morphoToken;
+    address public morphoWethPool;
+    IOracle public wethUsdOracle;
+    uint256 public per = 1e8;
     // ========================================
     // ============= EVENTS ===================
     // ========================================
 
-    event VaultRewardsUpdated(address indexed vault, uint256 rewardTokenCount);
+    event VaultRewardsUpdated(
+        address indexed vault,
+        uint256 morphoRate,
+        uint256 rewardTokenCount
+    );
+    event MorphoRateUpdated(address indexed vault, uint256 morphoRate);
     event RewardTokenAdded(
         address indexed vault,
         address indexed token,
@@ -104,7 +121,12 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
      * @notice Constructor
      * @param _governance Address of the governance contract
      */
-    constructor(address _governance) Governance(_governance) {}
+    constructor(address _governance) Governance(_governance) {
+        // Set default MORPHO pricing configuration (Mainnet defaults)
+        morphoToken = 0x58D97B57BB95320F9a05dC918Aef65434969c2B2; // MORPHO on mainnet
+        morphoWethPool = 0x25b96761e765b9AC20db18fA57Fa91e3b617Ec6F;
+        wethUsdOracle = IOracle(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+    }
 
     // ========================================
     // ========= EXTERNAL FUNCTIONS ===========
@@ -120,8 +142,8 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     ) external view override returns (uint256 totalAPR) {
         VaultRewards storage rewards = vaultRewards[_vault];
 
-        // Return 0 if no rewards configured or TVL is 0
-        if (rewards.rewardTokens.length == 0) {
+        // Return 0 if no rewards configured
+        if (rewards.morphoRate == 0 && rewards.rewardTokens.length == 0) {
             return 0;
         }
 
@@ -134,7 +156,13 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
 
         if (tvlUSD == 0) return 0;
 
-        // Sum up APR from all reward tokens
+        // Calculate MORPHO rewards APR (if configured)
+        if (rewards.morphoRate > 0) {
+            uint256 morphoAPR = _getMorphoAPR(rewards.morphoRate);
+            totalAPR += morphoAPR;
+        }
+
+        // Sum up APR from all additional reward tokens
         for (uint256 i = 0; i < rewards.rewardTokens.length; i++) {
             RewardToken memory rewardToken = rewards.rewardTokens[i];
 
@@ -165,15 +193,17 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     // ========================================
 
     /**
-     * @notice Set rewards configuration for a vault
+     * @notice Set complete rewards configuration for a vault
      * @param _vault The vault address
-     * @param _tokens Array of reward token addresses
-     * @param _priceOracles Array of price oracle addresses
-     * @param _rewardRates Array of reward rates per second in token units
+     * @param _morphoRate Annual MORPHO rewards (like morphoRate in MorphoAprOracle)
+     * @param _tokens Array of additional reward token addresses
+     * @param _priceOracles Array of price oracle addresses for additional tokens
+     * @param _rewardRates Array of reward rates per second for additional tokens
      * @param _assetPriceOracle Price oracle for the vault's asset
      */
     function setVaultRewards(
         address _vault,
+        uint256 _morphoRate,
         address[] calldata _tokens,
         address[] calldata _priceOracles,
         uint256[] calldata _rewardRates,
@@ -190,10 +220,15 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
         delete vaultRewards[_vault].rewardTokens;
 
         VaultRewards storage rewards = vaultRewards[_vault];
-        rewards.assetPriceOracle = _assetPriceOracle;
-        rewards.assetDecimals = IStrategyInterface(_vault).decimals();
 
-        // Add reward tokens
+        // Set MORPHO rate
+        rewards.morphoRate = _morphoRate;
+
+        // Set asset configuration
+        rewards.assetPriceOracle = _assetPriceOracle;
+        rewards.assetDecimals = IStrategyInterface(IStrategyInterface(_vault).asset()).decimals();
+
+        // Add additional reward tokens
         for (uint256 i = 0; i < _tokens.length; i++) {
             require(_tokens[i] != address(0), "Invalid token");
             require(_priceOracles[i] != address(0), "Invalid price oracle");
@@ -210,11 +245,67 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
             emit RewardTokenAdded(_vault, _tokens[i], _rewardRates[i]);
         }
 
-        emit VaultRewardsUpdated(_vault, _tokens.length);
+        emit VaultRewardsUpdated(_vault, _morphoRate, _tokens.length);
     }
 
     /**
-     * @notice Update reward rate for a specific token
+     * @notice Set global Uniswap V3 pool for MORPHO pricing
+     * @param _morphoToken MORPHO token address
+     * @param _morphoWethPool MORPHO/WETH Uniswap V3 pool address
+     * @param _wethUsdOracle Oracle for WETH/USD pricing
+     */
+    function setMorphoPricing(
+        address _morphoToken,
+        address _morphoWethPool,
+        address _wethUsdOracle
+    ) external onlyGovernance {
+        require(_morphoToken != address(0), "Invalid token");
+        require(_morphoWethPool != address(0), "Invalid pool");
+        require(_wethUsdOracle != address(0), "Invalid oracle");
+
+        morphoToken = _morphoToken;
+        morphoWethPool = _morphoWethPool;
+        wethUsdOracle = IOracle(_wethUsdOracle);
+    }
+
+    /**
+     * @notice Update MORPHO rate for a vault
+     * @param _vault The vault address
+     * @param _morphoRate New annual MORPHO rewards
+     */
+    function setMorphoRate(
+        address _vault,
+        uint256 _morphoRate
+    ) external onlyGovernance {
+        require(_vault != address(0), "Invalid vault");
+        vaultRewards[_vault].morphoRate = _morphoRate;
+        emit MorphoRateUpdated(_vault, _morphoRate);
+    }
+
+    /**
+     * @notice Update MORPHO rates for multiple vaults
+     * @param _vaults Array of vault addresses
+     * @param _morphoRates Array of annual MORPHO rewards
+     */
+    function setMorphoRates(
+        address[] calldata _vaults,
+        uint256[] calldata _morphoRates
+    ) external onlyGovernance {
+        require(_vaults.length == _morphoRates.length, "Array length mismatch");
+
+        for (uint256 i = 0; i < _vaults.length; i++) {
+            require(_vaults[i] != address(0), "Invalid vault");
+            vaultRewards[_vaults[i]].morphoRate = _morphoRates[i];
+            emit MorphoRateUpdated(_vaults[i], _morphoRates[i]);
+        }
+    }
+
+    function setPer(uint256 _per) external onlyGovernance {
+        per = _per;
+    }
+
+    /**
+     * @notice Update reward rate for a specific additional token
      * @param _vault The vault address
      * @param _tokenIndex Index of the token in the rewards array
      * @param _rewardRate New reward rate per second in token units
@@ -262,12 +353,27 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
      */
     function removeVaultRewards(address _vault) external onlyGovernance {
         delete vaultRewards[_vault];
-        emit VaultRewardsUpdated(_vault, 0);
+        emit VaultRewardsUpdated(_vault, 0, 0);
     }
 
     // ========================================
     // ========== VIEW FUNCTIONS ==============
     // ========================================
+
+    /**
+     * @notice Get MORPHO rewards rate for a vault
+     * @param _vault The vault address
+     * @return MORPHO rewards APR as 1e18
+     */
+    function getMorphoRewardsRate(
+        address _vault
+    ) external view returns (uint256) {
+        VaultRewards storage rewards = vaultRewards[_vault];
+
+        if (rewards.morphoRate == 0) return 0;
+
+        return _getMorphoAPR(rewards.morphoRate);
+    }
 
     /**
      * @notice Get reward tokens for a vault
@@ -283,23 +389,73 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
     /**
      * @notice Get vault configuration
      * @param _vault The vault address
+     * @return morphoRate Annual MORPHO rewards
      * @return assetPriceOracle Asset price oracle
-     * @return rewardTokenCount Number of reward tokens
+     * @return rewardTokenCount Number of additional reward tokens
      */
     function getVaultConfig(
         address _vault
     )
         external
         view
-        returns (address assetPriceOracle, uint256 rewardTokenCount)
+        returns (
+            uint256 morphoRate,
+            address assetPriceOracle,
+            uint256 rewardTokenCount
+        )
     {
         VaultRewards storage rewards = vaultRewards[_vault];
-        return (rewards.assetPriceOracle, rewards.rewardTokens.length);
+        return (
+            rewards.morphoRate,
+            rewards.assetPriceOracle,
+            rewards.rewardTokens.length
+        );
     }
 
     // ========================================
     // ======== INTERNAL FUNCTIONS ============
     // ========================================
+
+    /**
+     * @notice Calculate MORPHO rewards APR
+     * @param morphoRate Annual MORPHO rewards
+     * @return MORPHO APR in 1e18
+     */
+    function _getMorphoAPR(uint256 morphoRate) internal view returns (uint256) {
+        if (morphoRate == 0 || morphoWethPool == address(0)) return 0;
+
+        IUniswapV3Pool pool = IUniswapV3Pool(morphoWethPool);
+
+        // Determine swap direction based on token order in the pool
+        address token0 = pool.token0();
+        address token1 = pool.token1();
+
+        bool zeroForOne;
+        if (token0 == morphoToken) {
+            zeroForOne = true; // MORPHO -> WETH
+        } else if (token1 == morphoToken) {
+            zeroForOne = false; // WETH <- MORPHO
+        } else {
+            return 0; // Invalid pool configuration
+        }
+
+        // Simulate swap to get MORPHO price in WETH
+        (, int256 wethAmount) = Simulate.simulateSwap(
+            pool,
+            zeroForOne,
+            int256(morphoRate),
+            zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1
+        );
+
+        // WETH amount should be negative (outgoing) regardless of swap direction
+        if (wethAmount >= 0) return 0;
+
+        // Get WETH price in USD
+        uint256 wethPrice = _getOraclePrice(address(wethUsdOracle));
+        if (wethPrice == 0) return 0;
+
+        return (uint256(-wethAmount) * wethPrice) / per;
+    }
 
     /**
      * @notice Get USD value of tokens
@@ -321,17 +477,35 @@ contract BasicRewardsOracle is IMorphoGenericOracle, Governance {
             return (_amount * ORACLE_DECIMALS) / (10 ** _tokenDecimals);
         }
 
-        try IOracle(_priceOracle).latestAnswer() returns (int256 price) {
+        uint256 price = _getOraclePrice(_priceOracle);
+        if (price == 0) return 0;
+
+        // Convert to 1e8 precision
+        return (_amount * price) / (10 ** _tokenDecimals);
+    }
+
+    /**
+     * @notice Get price from oracle
+     * @param _oracle Oracle address
+     * @return Price in 8 decimals
+     */
+    function _getOraclePrice(address _oracle) internal view returns (uint256) {
+        if (_oracle == address(0)) return ORACLE_DECIMALS; // $1 default
+
+        try IOracle(_oracle).latestAnswer() returns (int256 price) {
             if (price <= 0) return 0;
 
             // Get oracle decimals, fallback to default if not available
-            uint8 oracleDecimals = _getOracleDecimals(_priceOracle);
+            uint8 oracleDecimals = _getOracleDecimals(_oracle);
 
-            // Convert to 1e8 precision
-            // amount * price * 1e8 / (10^tokenDecimals * 10^oracleDecimals)
-            return
-                (_amount * uint256(price) * ORACLE_DECIMALS) /
-                (10 ** _tokenDecimals * 10 ** oracleDecimals);
+            // Normalize to 8 decimals
+            if (oracleDecimals == 8) {
+                return uint256(price);
+            } else if (oracleDecimals < 8) {
+                return uint256(price) * 10 ** (8 - oracleDecimals);
+            } else {
+                return uint256(price) / 10 ** (oracleDecimals - 8);
+            }
         } catch {
             return 0;
         }
