@@ -364,8 +364,13 @@ contract MorphoOracleTest is OracleTest {
         return address(_strategy);
     }
 
-    function test_oracle(uint256 _amount, uint16 _percentChange) public virtual override {
-        uint256 rewardsRate = MorphoAprOracle(address(oracle)).getRewardsRate(vault);
+    function test_oracle(
+        uint256 _amount,
+        uint16 _percentChange
+    ) public virtual override {
+        uint256 rewardsRate = MorphoAprOracle(address(oracle)).getRewardsRate(
+            vault
+        );
         console.log("Rewards rate is ", rewardsRate);
         super.test_oracle(_amount, _percentChange);
     }

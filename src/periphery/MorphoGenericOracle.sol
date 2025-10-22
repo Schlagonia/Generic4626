@@ -13,7 +13,11 @@ interface IOracle {
     function latestAnswer() external view returns (int256);
 }
 
-contract MorphoAprOracle is AprOracleBase {
+interface IMorphoGenericOracle {
+    function getRewardsRate(address _vault) external view returns (uint256);
+}
+
+contract MorphoGenericAprOracle is AprOracleBase {
     using MorphoBalancesLib for IMorpho;
 
     constructor() AprOracleBase("Morpho Apr Oracle", msg.sender) {}
@@ -21,21 +25,11 @@ contract MorphoAprOracle is AprOracleBase {
     IMorpho internal constant MORPHO =
         IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
 
-    IOracle internal constant WETH_USD_ORACLE =
-        IOracle(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-
-    address internal constant UNIV3_MORPHO_WETH_POOL =
-        0x25b96761e765b9AC20db18fA57Fa91e3b617Ec6F;
-
-    uint160 internal constant MIN_SQRT_RATIO = 4295128739;
-    uint160 internal constant MAX_SQRT_RATIO =
-        1461446703485210103287273052203988822378723970342;
-
     uint256 internal constant MAX_BPS = 10_000;
     uint256 internal constant WAD = 1e18;
     uint256 internal constant SECONDS_PER_YEAR = 31_556_952;
 
-    mapping(address => uint256) public morphoRate;
+    mapping(address => address) public rewardOracles;
 
     uint256 public per = 1e8;
 
@@ -74,21 +68,12 @@ contract MorphoAprOracle is AprOracleBase {
     function getRewardsRate(
         address _vault
     ) public view virtual returns (uint256) {
-        uint256 _morphoRate = morphoRate[_vault];
-        if (_morphoRate == 0) {
+        address _rewardOracle = rewardOracles[_vault];
+        if (_rewardOracle == address(0)) {
             return 0;
         }
 
-        (, int256 _rewardAmountWeth) = Simulate.simulateSwap(
-            IUniswapV3Pool(UNIV3_MORPHO_WETH_POOL),
-            true, // zeroForOne, Morpho < WETH
-            int256(_morphoRate),
-            MIN_SQRT_RATIO + 1
-        );
-
-        return
-            (uint256(WETH_USD_ORACLE.latestAnswer()) *
-                uint256(-_rewardAmountWeth)) / per;
+        return IMorphoGenericOracle(_rewardOracle).getRewardsRate(_vault);
     }
 
     function getUnderlyingYield(
@@ -147,27 +132,12 @@ contract MorphoAprOracle is AprOracleBase {
                 (WAD - IMetaMorpho(_vault).fee())) / WAD;
     }
 
-    function setMorphoRates(
+    function setRewardOracles(
         address[] memory _vaults,
-        uint256[] memory _morphoRates
+        address[] memory _rewardOracles
     ) external virtual onlyGovernance {
         for (uint256 i = 0; i < _vaults.length; i++) {
-            _setMorphoRate(_vaults[i], _morphoRates[i]);
+            rewardOracles[_vaults[i]] = _rewardOracles[i];
         }
-    }
-
-    function setMorphoRate(
-        address _vault,
-        uint256 _morphoRate
-    ) external virtual onlyGovernance {
-        _setMorphoRate(_vault, _morphoRate);
-    }
-
-    function _setMorphoRate(address _vault, uint256 _morphoRate) internal {
-        morphoRate[_vault] = _morphoRate;
-    }
-
-    function setPer(uint256 _per) external virtual onlyGovernance {
-        per = _per;
     }
 }
